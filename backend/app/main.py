@@ -10,7 +10,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Response, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from pymongo import ASCENDING, DESCENDING
+from pymongo import ASCENDING, DESCENDING, UpdateOne
 from pymongo.errors import DuplicateKeyError
 
 from app.config import get_settings
@@ -27,6 +27,7 @@ from app.schemas import (
     ShipmentCreate,
     ShipmentList,
     ShipmentResponse,
+    ShipmentReorder,
     ShipmentUpdate,
     TranslateRequest,
     TranslateResponse,
@@ -57,6 +58,28 @@ async def resolve_address(database: AsyncIOMotorDatabase, number: int) -> dict:
     if not address:
         raise HTTPException(
             status_code=422, detail=f"La dirección n.º {number} no existe en el directorio"
+        )
+    return address
+
+
+async def resolve_random_address(
+    database: AsyncIOMotorDatabase, manifest_id: str
+) -> dict:
+    used_numbers = await database.shipments.distinct(
+        "address_number", {"manifest_id": manifest_id}
+    )
+    pipeline = [
+        {"$match": {"number": {"$nin": [number for number in used_numbers if number]}}},
+        {"$sample": {"size": 1}},
+    ]
+    address = None
+    async for candidate in database.addresses.aggregate(pipeline):
+        address = candidate
+        break
+    if not address:
+        raise HTTPException(
+            status_code=409,
+            detail="No quedan direcciones sin usar en este manifiesto. Registra más direcciones para continuar.",
         )
     return address
 
@@ -244,8 +267,9 @@ async def list_shipments(
 async def create_shipment(
     payload: ShipmentCreate, database: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    address = await resolve_address(database, payload.address_number)
     document = payload.model_dump(exclude={"translate_contents"}, mode="json")
+    bag = None
+    manifest = None
     if payload.bag_id:
         bag, manifest = await resolve_bag(database, payload.bag_id)
         document.update(
@@ -257,11 +281,24 @@ async def create_shipment(
                 "attendant": manifest["attendant"],
             }
         )
+    if manifest:
+        address = await resolve_random_address(database, str(manifest["_id"]))
+    elif payload.address_number:
+        address = await resolve_address(database, payload.address_number)
+    else:
+        raise HTTPException(status_code=422, detail="El baucher debe pertenecer a una maleta")
+
+    if bag:
+        last = await database.shipments.find_one(
+            {"bag_id": str(bag["_id"])}, sort=[("print_order", DESCENDING)]
+        )
+        document["print_order"] = int(last.get("print_order", 0) if last else 0) + 1
     if payload.translate_contents:
         document["contents"] = await run_in_threadpool(translate_contents, payload.contents)
     document.update(
         {
             "consignee_address": address["address"],
+            "address_number": address["number"],
             "phone": address["phone"],
             "customs_type": "UNSOLICITED",
             "quantity": 2,
@@ -302,9 +339,14 @@ async def update_shipment(
     if not current:
         raise HTTPException(status_code=404, detail="Envío no encontrado")
 
-    changes = payload.model_dump(exclude_unset=True, exclude={"translate_contents"}, mode="json")
+    changes = payload.model_dump(
+        exclude_unset=True,
+        exclude={"translate_contents", "address_number"},
+        mode="json",
+    )
     if payload.bag_id:
         bag, manifest = await resolve_bag(database, payload.bag_id)
+        moving_manifest = str(manifest["_id"]) != current.get("manifest_id")
         changes.update(
             {
                 "bag_id": str(bag["_id"]),
@@ -314,10 +356,15 @@ async def update_shipment(
                 "attendant": manifest["attendant"],
             }
         )
-    address_number = changes.get("address_number")
-    if address_number is not None:
-        address = await resolve_address(database, address_number)
-        changes.update({"consignee_address": address["address"], "phone": address["phone"]})
+        if moving_manifest:
+            address = await resolve_random_address(database, str(manifest["_id"]))
+            changes.update(
+                {
+                    "address_number": address["number"],
+                    "consignee_address": address["address"],
+                    "phone": address["phone"],
+                }
+            )
     if payload.translate_contents and "contents" in changes:
         changes["contents"] = await run_in_threadpool(translate_contents, changes["contents"])
     changes["updated_at"] = utc_now()
@@ -516,7 +563,42 @@ async def list_bag_shipments(
     database: AsyncIOMotorDatabase = Depends(get_database),
 ):
     await resolve_bag(database, bag_id)
-    cursor = database.shipments.find({"bag_id": bag_id}).sort("created_at", ASCENDING)
+    cursor = database.shipments.find({"bag_id": bag_id}).sort(
+        [("print_order", ASCENDING), ("created_at", ASCENDING)]
+    )
+    return [serialize(document) async for document in cursor]
+
+
+@app.put(
+    f"{settings.api_prefix}/bags/{{bag_id}}/shipments/order",
+    response_model=list[ShipmentResponse],
+    tags=["Maletas"],
+)
+async def reorder_bag_shipments(
+    bag_id: str,
+    payload: ShipmentReorder,
+    database: AsyncIOMotorDatabase = Depends(get_database),
+):
+    await resolve_bag(database, bag_id)
+    current_ids = {
+        str(document["_id"])
+        async for document in database.shipments.find({"bag_id": bag_id}, {"_id": 1})
+    }
+    if set(payload.shipment_ids) != current_ids:
+        raise HTTPException(
+            status_code=422,
+            detail="El orden debe incluir exactamente todos los bauchers de la maleta",
+        )
+    operations = [
+        UpdateOne(
+            {"_id": object_id(shipment_id), "bag_id": bag_id},
+            {"$set": {"print_order": position, "updated_at": utc_now()}},
+        )
+        for position, shipment_id in enumerate(payload.shipment_ids, start=1)
+    ]
+    if operations:
+        await database.shipments.bulk_write(operations)
+    cursor = database.shipments.find({"bag_id": bag_id}).sort("print_order", ASCENDING)
     return [serialize(document) async for document in cursor]
 
 

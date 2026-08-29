@@ -357,6 +357,161 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
   .manifest-table th { background: #0b2852 !important; color: white !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
 
+/* Centro de documentos: navegación por tarea y jerarquía manifiesto > maleta > baucher. */
+.workspace-shell { min-height: 100dvh; display: grid; grid-template-columns: 240px minmax(0, 1fr); background: #f3f6fa; }
+.workspace-sidebar { position: sticky; top: 0; z-index: 30; height: 100dvh; padding: 22px 14px; color: #dce7f7; background: linear-gradient(180deg, var(--navy-950), #091f40 72%, #0d2c58); }
+.workspace-sidebar .print-brand { min-height: 64px; margin: 0 8px 30px; color: white; }
+.workspace-sidebar .print-brand small { color: #9db2cf; }
+.workspace-nav { display: grid; gap: 7px; }
+.workspace-nav button { min-height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 13px; color: #b9c9df; background: transparent; border: 1px solid transparent; border-radius: 10px; text-align: left; font-weight: 600; transition: color var(--transition), background var(--transition), border-color var(--transition); }
+.workspace-nav button:hover { color: white; background: rgb(255 255 255 / 7%); }
+.workspace-nav button.active { color: white; background: rgb(37 99 184 / 36%); border-color: rgb(114 169 234 / 18%); box-shadow: inset 3px 0 0 var(--orange-500); }
+.workspace-nav svg { width: 19px; }
+.workspace-content { min-width: 0; }
+.screen-content { width: min(1540px, 100%); margin: 0 auto; padding: 32px clamp(18px, 3vw, 44px) 56px; }
+.section-heading > .button { flex: none; }
+.document-controls { align-items: end; }
+.document-controls .document-count { margin-left: auto; }
+.manifest-actions { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 18px; padding: 16px 18px; background: white; border: 1px solid var(--slate-200); border-radius: 12px; box-shadow: var(--shadow-sm); }
+.manifest-actions > div:first-child { min-width: 0; display: grid; }
+.manifest-actions > div:first-child strong { overflow: hidden; color: var(--slate-950); text-overflow: ellipsis; white-space: nowrap; }
+.manifest-actions > div:first-child span { color: var(--slate-500); font-size: 12px; }
+.manifest-actions > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
+.bag-overview { min-width: 0; display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 18px; margin-top: 18px; }
+.bag-list { align-self: start; overflow: hidden; background: white; border: 1px solid var(--slate-200); border-radius: 12px; box-shadow: var(--shadow-sm); }
+.bag-list header { padding: 20px 18px 13px; border-bottom: 1px solid var(--slate-100); }
+.bag-list h2 { margin: 3px 0 0; font-size: 16px; }
+.bag-list > button { width: calc(100% - 16px); min-height: 66px; display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: center; gap: 10px; margin: 8px; padding: 8px 10px; color: var(--slate-700); background: transparent; border: 1px solid transparent; border-radius: 9px; text-align: left; }
+.bag-list > button:hover, .bag-list > button.active { color: var(--navy-800); background: var(--blue-50); border-color: #c9def8; }
+.bag-list > button > span:first-child { width: 36px; height: 36px; display: grid; place-items: center; background: var(--slate-100); border-radius: 8px; }
+.bag-list > button > span:last-child { min-width: 0; display: grid; }
+.bag-list > button strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.bag-list > button small { color: var(--slate-500); font-size: 11px; }
+.bag-list > .bag-list__add { display: flex; justify-content: center; color: var(--blue-700); border-top: 1px solid var(--slate-100); border-radius: 0; font-weight: 650; }
+.manifest-preview-stack { min-width: 0; display: grid; gap: 24px; }
+.manifest-preview-page { min-width: 0; overflow: auto; padding: 14px; background: #dfe5ec; border-radius: 12px; }
+.manifest-preview-page__label { position: sticky; left: 0; width: max-content; margin: 0 0 9px; padding: 4px 9px; color: var(--slate-600); background: white; border-radius: 999px; font-size: 10px; font-weight: 700; box-shadow: var(--shadow-sm); }
+.document-stage__canvas > .manifest-preview-stack { width: 100%; }
+.package-summary { max-height: calc(100dvh - 220px); }
+.package-summary > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.package-summary > header .button { min-height: 38px; padding: 0 10px; font-size: 11px; }
+
+.voucher-sort-list { overflow-y: auto; padding: 0 8px 10px; }
+.voucher-sort-item { min-height: 70px; display: grid; grid-template-columns: 34px 32px minmax(0, 1fr) auto; align-items: center; gap: 5px; margin-bottom: 5px; padding: 6px; color: var(--slate-700); background: white; border: 1px solid transparent; border-radius: 9px; transition: background var(--transition), border-color var(--transition), box-shadow var(--transition); }
+.voucher-sort-item:hover, .voucher-sort-item--selected { color: var(--navy-800); background: var(--blue-50); border-color: #c9def8; }
+.voucher-sort-item--dragging { z-index: 10; box-shadow: var(--shadow-md); opacity: .86; }
+.drag-handle { width: 34px; height: 44px; display: grid; place-items: center; color: var(--slate-500); background: transparent; border: 0; border-radius: 7px; cursor: grab; touch-action: none; }
+.drag-handle:active { cursor: grabbing; }
+.drag-handle:hover { color: var(--navy-800); background: white; }
+.drag-handle svg { width: 18px; }
+.voucher-sort-position { color: var(--slate-500); font: 10px ui-monospace, monospace; }
+.voucher-sort-main { min-width: 0; display: grid; padding: 6px; color: inherit; background: transparent; border: 0; text-align: left; }
+.voucher-sort-main strong { font: 650 12px ui-monospace, monospace; }
+.voucher-sort-main small { overflow: hidden; color: var(--slate-500); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.voucher-sort-actions { display: grid; grid-template-columns: repeat(2, 32px); gap: 3px; }
+.icon-button--compact { width: 32px; height: 32px; border-radius: 7px; }
+.icon-button--compact svg { width: 15px; }
+.address-assignment { min-height: 74px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; color: var(--slate-700); background: var(--blue-50); border: 1px solid #c9def8; border-radius: 9px; }
+.address-assignment > span { width: 36px; height: 36px; display: grid; place-items: center; color: var(--blue-700); background: white; border-radius: 8px; }
+.address-assignment svg { width: 19px; }
+.address-assignment strong { font-size: 13px; }
+.address-assignment p { margin: 2px 0 0; color: var(--slate-500); font-size: 11px; }
+.confirm-delete { display: grid; place-items: center; gap: 12px; padding: 10px 4px 4px; text-align: center; }
+.confirm-delete > svg { width: 46px; height: 46px; padding: 11px; color: var(--red-700); background: var(--red-100); border-radius: 12px; }
+.confirm-delete p { margin: 0; }
+.confirm-delete > div { display: flex; justify-content: center; gap: 9px; margin-top: 6px; }
+.assigned-address-card { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 14px; padding: 18px; color: var(--slate-700); background: var(--blue-50); border: 1px solid #c9def8; border-radius: 12px; }
+.assigned-address-card > span { width: 48px; height: 48px; display: grid; place-items: center; color: white; background: var(--blue-600); border-radius: 11px; }
+.assigned-address-card > span svg { width: 22px; }
+.assigned-address-card > div { min-width: 0; display: grid; gap: 3px; }
+.assigned-address-card small { color: var(--blue-700); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.assigned-address-card strong { overflow-wrap: anywhere; font-size: 15px; }
+.assigned-address-card p { margin: 0; color: var(--slate-600); font-size: 13px; }
+
+/* Medidas tomadas de las áreas impresas reales del XLSM. */
+.excel-voucher { width: min(100%, 642.5px); font-size: 15pt; line-height: 1; }
+.excel-voucher__row { height: 19.5pt; min-height: 0; grid-template-columns: 104fr 382fr; }
+.excel-voucher__row > * { align-items: flex-end; overflow: hidden; padding: 0 2px 1px; white-space: nowrap; }
+.excel-voucher__heading { height: 17.25pt; grid-template-columns: 104fr 180fr 165fr 37fr; font-size: 15pt; }
+.excel-voucher__row:nth-child(6) { height: 18.75pt; }
+.excel-voucher__content { height: 39pt; min-height: 0; }
+.excel-voucher__content > span { align-items: center; }
+.excel-voucher__content > strong { align-items: center; overflow-wrap: anywhere; white-space: normal; }
+.excel-manifest { min-width: 1077px; padding: 24px 22px 30px; }
+.excel-manifest__attendant { font-size: 16.56pt; }
+.excel-manifest__meta { font-size: 16.56pt; }
+.excel-manifest__row > span { font-size: 8.74pt; }
+
+@media (max-width: 1100px) {
+  .manifest-actions { align-items: stretch; flex-direction: column; }
+  .manifest-actions > div:last-child { justify-content: flex-start; }
+  .bag-overview { grid-template-columns: 1fr; }
+  .bag-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bag-list header, .bag-list > .bag-list__add { grid-column: 1 / -1; }
+  .print-workbench { grid-template-columns: 1fr; }
+  .package-summary { max-height: 480px; }
+}
+
+@media (max-width: 760px) {
+  .workspace-shell { display: block; }
+  .workspace-sidebar { position: sticky; height: auto; padding: 10px 12px; }
+  .workspace-sidebar .print-brand { min-height: 45px; margin: 0 4px 8px; }
+  .workspace-sidebar .print-brand > span { width: 36px; height: 36px; }
+  .workspace-nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; overflow-x: auto; }
+  .workspace-nav button { min-width: 0; min-height: 44px; justify-content: center; padding: 0 7px; font-size: 11px; }
+  .workspace-nav button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .workspace-nav svg { width: 17px; }
+  .screen-content { padding: 20px 14px 42px; }
+  .section-heading { align-items: stretch; flex-direction: column; }
+  .section-heading > .button { width: 100%; }
+  .document-controls .document-count { width: 100%; margin-left: 0; }
+  .manifest-actions > div:last-child { display: grid; }
+  .bag-list { grid-template-columns: 1fr; }
+  .bag-list header, .bag-list > .bag-list__add { grid-column: auto; }
+  .manifest-preview-page { overflow: hidden; padding: 10px; }
+  .manifest-preview-page .excel-manifest { width: 1077px; zoom: .27; }
+  .voucher-sort-item { grid-template-columns: 34px 28px minmax(0, 1fr); }
+  .voucher-sort-actions { grid-column: 3; grid-template-columns: repeat(4, 34px); }
+  .package-summary > header { align-items: stretch; flex-direction: column; }
+  .package-summary > header .button { width: 100%; }
+}
+
+@page manifest-page { size: A4 landscape; margin: .2362204724in; }
+@page voucher-page { size: A4 portrait; margin: .75in .7in; }
+
+@media print {
+  body.print-manifest-document .workspace-sidebar,
+  body.print-vouchers-document .workspace-sidebar,
+  body.print-single-voucher .workspace-sidebar,
+  body.print-manifest-document .screen-content,
+  body.print-vouchers-document .screen-content,
+  body.print-single-voucher .screen-content,
+  body.print-manifest-document .modal-layer,
+  body.print-vouchers-document .modal-layer,
+  body.print-single-voucher .modal-layer { display: none !important; }
+  body.print-manifest-document .workspace-shell,
+  body.print-vouchers-document .workspace-shell,
+  body.print-single-voucher .workspace-shell { display: block; min-height: 0; background: white; }
+  body.print-manifest-document .workspace-content,
+  body.print-vouchers-document .workspace-content,
+  body.print-single-voucher .workspace-content { width: auto; margin: 0; padding: 0; }
+  body.print-manifest-document .excel-manifest { width: 100%; min-width: 0; padding: 0; }
+  body.print-manifest-document .excel-manifest__attendant { min-height: 15mm; font-size: 16.56pt; }
+  body.print-manifest-document .excel-manifest__meta { min-height: 14mm; font-size: 16.56pt; }
+  body.print-manifest-document .excel-manifest__row { min-height: 10.3mm; }
+  body.print-manifest-document .excel-manifest__row > span { font-size: 8.74pt; }
+  body.print-vouchers-document .excel-voucher,
+  body.print-single-voucher .excel-voucher { width: 128.6mm; margin: 0; border: .264583mm solid #000; font-size: 15pt; }
+  body.print-vouchers-document .excel-voucher__row,
+  body.print-single-voucher .excel-voucher__row { height: 19.5pt; min-height: 0; border-bottom-width: .264583mm; }
+  body.print-vouchers-document .excel-voucher__heading,
+  body.print-single-voucher .excel-voucher__heading { height: 17.25pt; font-size: 15pt; }
+  body.print-vouchers-document .excel-voucher__row:nth-child(6),
+  body.print-single-voucher .excel-voucher__row:nth-child(6) { height: 18.75pt; }
+  body.print-vouchers-document .excel-voucher__content,
+  body.print-single-voucher .excel-voucher__content { height: 39pt; min-height: 0; }
+}
+
 /* Centro de impresión: la aplicación usa color; los documentos conservan el Excel monocromático. */
 .print-center { min-height: 100dvh; background: #f3f6fa; }
 .print-center__header { min-height: 92px; display: grid; grid-template-columns: 220px 1fr auto; align-items: center; gap: 28px; padding: 16px clamp(22px, 4vw, 64px); background: white; border-bottom: 1px solid var(--slate-200); }
@@ -551,4 +706,38 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
   body.print-single-voucher .excel-voucher__content { min-height: 14mm; }
   body.print-vouchers-document .excel-voucher footer,
   body.print-single-voucher .excel-voucher footer { font-size: 9pt; transform: translateY(8mm); }
+}
+
+/* Este bloque debe quedar al final: prevalece sobre el formato aproximado legado. */
+.excel-voucher { width: min(100%, 642.5px); font-size: 15pt; line-height: 1; }
+.excel-voucher__row { height: 19.5pt; min-height: 0; grid-template-columns: 104fr 382fr; }
+.excel-voucher__row > * { align-items: flex-end; overflow: hidden; padding: 0 2px 1px; white-space: nowrap; }
+.excel-voucher__heading { height: 17.25pt; grid-template-columns: 104fr 180fr 165fr 37fr; font-size: 15pt; }
+.excel-voucher__row:nth-child(6) { height: 18.75pt; }
+.excel-voucher__content { height: 39pt; min-height: 0; }
+.excel-voucher__content > span { align-items: center; }
+.excel-voucher__content > strong { align-items: center; overflow-wrap: anywhere; white-space: normal; }
+.excel-manifest { min-width: 1077px; }
+.excel-manifest__attendant, .excel-manifest__meta { font-size: 16.56pt; }
+.excel-manifest__row > span { font-size: 8.74pt; }
+
+@media (max-width: 760px) {
+  .manifest-preview-page .excel-manifest,
+  .document-stage__canvas--manifest .excel-manifest { width: 1077px; min-width: 1077px; zoom: .27; }
+}
+
+@media print {
+  body.print-manifest-document .excel-manifest__attendant,
+  body.print-manifest-document .excel-manifest__meta { font-size: 16.56pt; }
+  body.print-manifest-document .excel-manifest__row > span { font-size: 8.74pt; }
+  body.print-vouchers-document .excel-voucher,
+  body.print-single-voucher .excel-voucher { width: 170mm; margin: 0; border: .264583mm solid #000; font-size: 15pt; line-height: 1; }
+  body.print-vouchers-document .excel-voucher__row,
+  body.print-single-voucher .excel-voucher__row { height: 19.5pt; min-height: 0; grid-template-columns: 104fr 382fr; border-bottom-width: .264583mm; }
+  body.print-vouchers-document .excel-voucher__heading,
+  body.print-single-voucher .excel-voucher__heading { height: 17.25pt; grid-template-columns: 104fr 180fr 165fr 37fr; font-size: 15pt; }
+  body.print-vouchers-document .excel-voucher__row:nth-child(6),
+  body.print-single-voucher .excel-voucher__row:nth-child(6) { height: 18.75pt; }
+  body.print-vouchers-document .excel-voucher__content,
+  body.print-single-voucher .excel-voucher__content { height: 39pt; min-height: 0; }
 }

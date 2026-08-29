@@ -75,7 +75,7 @@ class ShipmentBase(BaseModel):
     shipper_name: str = Field(min_length=2, max_length=120)
     shipper_address: str = Field(min_length=3, max_length=240)
     consignee_name: str = Field(min_length=2, max_length=120)
-    address_number: int = Field(ge=1)
+    address_number: int | None = Field(default=None, ge=1)
     contents: str = Field(min_length=2, max_length=500)
     attendant: str = Field(min_length=2, max_length=120)
     shipment_date: date = Field(default_factory=date.today)
@@ -132,6 +132,7 @@ class ShipmentResponse(ShipmentBase):
     phone: str
     customs_type: str = "UNSOLICITED"
     quantity: int = 2
+    print_order: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -142,6 +143,17 @@ class ShipmentList(BaseModel):
     page: int
     limit: int
     pages: int
+
+
+class ShipmentReorder(BaseModel):
+    shipment_ids: list[str] = Field(min_length=1, max_length=500)
+
+    @field_validator("shipment_ids")
+    @classmethod
+    def unique_ids(cls, value: list[str]) -> list[str]:
+        if len(value) != len(set(value)):
+            raise ValueError("La lista de bauchers contiene elementos repetidos")
+        return value
 
 
 class DashboardStats(BaseModel):

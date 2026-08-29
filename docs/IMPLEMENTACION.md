@@ -1,6 +1,6 @@
 # Implementación del sistema de manifiestos
 
-Última actualización: 2026-08-28
+Última actualización: 2026-08-29
 
 ## Objetivo funcional
 
@@ -45,6 +45,7 @@ Cada registro representa un baucher. Conserva los campos del Excel y añade:
 - `manifest_id`.
 - `bag_id`.
 - `bag_number` desnormalizado para impresión.
+- `print_order`: posición persistente dentro de la maleta.
 
 ### `addresses`
 
@@ -64,12 +65,16 @@ La migración es idempotente: solo completa registros que todavía no tienen jer
 
 ## Flujo de interfaz
 
-- Pestaña `Documentos`:
-  1. Seleccionar o crear manifiesto.
-  2. Seleccionar o agregar maleta dentro del manifiesto.
-  3. Agregar bauchers dentro de la maleta.
-  4. Previsualizar e imprimir.
-- Pestaña `Direcciones`:
+- Sección `Manifiestos y maletas`:
+  1. Crear o seleccionar un manifiesto.
+  2. Agregar una o varias maletas.
+  3. Previsualizar una o varias hojas por maleta.
+  4. Imprimir la maleta seleccionada, el manifiesto completo o todos sus bauchers.
+- Sección `Bauchers`:
+  - Agregar, editar y eliminar bauchers.
+  - Reordenar por arrastre, teclado o botones subir/bajar.
+  - Imprimir un baucher o todos los de la maleta.
+- Sección `Direcciones`:
   - Buscar direcciones.
   - Registrar nuevas direcciones.
   - Editar direcciones existentes.
@@ -77,10 +82,20 @@ La migración es idempotente: solo completa registros que todavía no tienen jer
 
 ## Impresión
 
-- Manifiesto: A4 horizontal, una hoja por maleta del manifiesto.
+- Manifiesto: A4 horizontal, 15 bauchers por hoja y tantas hojas como necesite cada maleta.
 - Bauchers: A4 vertical, un baucher por página.
-- Se puede imprimir un baucher individual o todos los de la maleta seleccionada.
+- Se puede imprimir un baucher, una maleta, todo el manifiesto o todos los bauchers del manifiesto.
 - Durante la impresión se oculta por completo la interfaz web.
+
+Las medidas recuperadas del XLSM y la justificación de los elementos que sí forman parte del papel están en `docs/IMPRESION_Y_ORDEN.md`.
+
+## Asignación de destino
+
+- El formulario no permite elegir manualmente la dirección de destino.
+- La API selecciona aleatoriamente una dirección todavía no utilizada dentro del mismo manifiesto.
+- La dirección permanece estable al editar el baucher.
+- Inmediatamente después de crear el baucher, una confirmación de solo lectura muestra el número, la dirección y el teléfono asignados.
+- Cuando se agotan las direcciones disponibles, la creación se detiene con un error recuperable.
 
 ## Traducción
 
@@ -107,6 +122,7 @@ camisas, pantalones y juguetes para niños
 - `GET /api/v1/manifests/{manifest_id}/bags`
 - `POST /api/v1/manifests/{manifest_id}/bags`
 - `GET /api/v1/bags/{bag_id}/shipments`
+- `PUT /api/v1/bags/{bag_id}/shipments/order`
 - `POST /api/v1/translate`
 
 Los endpoints existentes de direcciones y envíos se mantienen.
@@ -119,10 +135,12 @@ Los endpoints existentes de direcciones y envíos se mantienen.
 - Docker Compose: reconstruido correctamente.
 - Prueba integral API Manifiesto → Maleta → Baucher: aprobada y datos temporales eliminados.
 - Traducción dentro de Docker: aprobada mediante el proveedor de respaldo.
-- Revisión visual: aprobada a 1440 px y 375 px.
-- Desbordamiento horizontal móvil en Documentos y Direcciones: no detectado.
-- Impresión jerárquica: 3 maletas generan 3 hojas de manifiesto.
+- Revisión visual: aprobada a 1440 px, 375 px y móvil horizontal con movimiento reducido.
+- Desbordamiento horizontal móvil en las tres secciones: no detectado.
+- Impresión jerárquica: una maleta temporal con 16 bauchers generó exactamente 2 hojas.
 - Formulario de maleta: número y nombre opcional disponibles.
-- Formulario de baucher: contexto heredado del manifiesto, 99 direcciones disponibles y traducción visible.
+- Formulario de baucher: contexto heredado, destino automático de solo lectura y traducción visible.
 - PDF de manifiesto: 3 páginas A4 horizontales verificadas.
-- PDF de bauchers: 15 páginas A4 verticales verificadas para la maleta #1.
+- PDF de todos los bauchers: 38 páginas A4 verticales verificadas.
+- Prueba integral de API: direcciones aleatorias distintas, edición conservando destino, reordenamiento persistente y eliminación aprobados.
+- Playwright: 3 pruebas de interfaz e impresión aprobadas.

@@ -4,6 +4,17 @@ function displayDate(value) {
   return `${day}-${month}-${year}`
 }
 
+export const MANIFEST_ROWS_PER_PAGE = 15
+
+export function paginateManifest(shipments) {
+  if (!shipments.length) return [[]]
+  const pages = []
+  for (let index = 0; index < shipments.length; index += MANIFEST_ROWS_PER_PAGE) {
+    pages.push(shipments.slice(index, index + MANIFEST_ROWS_PER_PAGE))
+  }
+  return pages
+}
+
 export default function ExcelManifest({
   shipments,
   bagNumber,
@@ -34,6 +45,9 @@ export default function ExcelManifest({
             <span>{shipment.customs_type}</span>
             <span>{shipment.quantity}</span>
           </div>
+        ))}
+        {Array.from({ length: Math.max(0, MANIFEST_ROWS_PER_PAGE - shipments.length) }, (_, index) => (
+          <div className="excel-manifest__row excel-manifest__row--empty" key={`empty-${index}`} aria-hidden="true" />
         ))}
       </div>
     </article>

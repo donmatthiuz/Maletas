@@ -7,9 +7,11 @@ Aplicación web enfocada en generar e imprimir los documentos del libro Excel `M
 - Creación de manifiestos con fecha y encargado.
 - Creación de varias maletas dentro de cada manifiesto.
 - Registro de varios bauchers dentro de cada maleta.
+- Edición, eliminación y ordenamiento persistente de bauchers.
 - Directorio independiente para registrar y editar direcciones.
-- Vista previa e impresión de todas las maletas del manifiesto en A4 horizontal.
-- Vista previa e impresión de un baucher o de todos los bauchers en A4 vertical.
+- Asignación aleatoria de destino sin repetir direcciones dentro del manifiesto.
+- Vista previa e impresión multipágina de las maletas en A4 horizontal.
+- Impresión de un baucher, una maleta o todos los bauchers del manifiesto en A4 vertical.
 - Traducción automática completa español→inglés, conservando las equivalencias de la macro.
 - Formatos, columnas y proporciones recuperados de las hojas `Manifiesto` y `Bauncher`.
 
@@ -66,6 +68,7 @@ Vite redirige `/api` a la API local en el puerto `8000`.
 - `GET/POST /api/v1/manifests`
 - `GET/POST /api/v1/manifests/{id}/bags`
 - `GET /api/v1/bags/{id}/shipments`
+- `PUT /api/v1/bags/{id}/shipments/order`
 - `GET/POST /api/v1/shipments`
 - `GET/PATCH/DELETE /api/v1/shipments/{id}`
 - `GET /api/v1/shipments/export.csv`

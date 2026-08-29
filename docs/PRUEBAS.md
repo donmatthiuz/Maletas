@@ -1,12 +1,13 @@
 # Evidencias de validación
 
-Fecha: 2026-08-28
+Fecha: 2026-08-29
 
 ## Pruebas automatizadas
 
 ```text
 pytest: 5 passed
-vite build: aprobado, 1601 módulos transformados
+Playwright: 3 passed
+vite build: aprobado, 1606 módulos transformados
 git diff --check: sin errores de espacios o parches
 ```
 
@@ -31,15 +32,15 @@ Manifiesto 2026-08-28
 
 Total conservado: 38 bauchers y 99 direcciones.
 
-## Prueba integral temporal
+## Prueba integral de API
 
 Se creó mediante la API:
 
 1. Un manifiesto temporal.
 2. La maleta #77 dentro del manifiesto.
-3. Un baucher dentro de la maleta.
+3. Dos bauchers sin enviar `address_number`.
 
-Se verificaron `manifest_id`, `bag_id`, número, fecha y encargado heredados. Todos los datos temporales fueron eliminados al finalizar.
+Se verificaron dos direcciones aleatorias distintas, órdenes iniciales `1` y `2`, reordenamiento persistente, edición conservando el destino y eliminación. Todos los datos temporales fueron eliminados al finalizar.
 
 ## Traducción
 
@@ -63,13 +64,24 @@ Pruebas con Chromium:
 
 - Escritorio: 1440 × 1000.
 - Móvil: 375 × 812.
-- Pestañas `Documentos` y `Direcciones`: visibles y navegables.
+- Navegación `Manifiestos y maletas`, `Bauchers` y `Direcciones`: visible y operable.
 - Modal `Nuevo manifiesto`: accesible.
 - Modal `Agregar maleta`: 2 campos disponibles.
-- Modal `Agregar baucher`: contexto de manifiesto/maleta, 99 direcciones y acción `Traducir`.
-- Desbordamiento horizontal móvil: no detectado.
+- `Agregar baucher` aparece dentro de la sección Bauchers, no como acción global.
+- Acciones de editar, eliminar, arrastrar, subir y bajar: visibles.
+- Modal `Agregar baucher`: contexto de manifiesto/maleta, destino automático y acción `Traducir`.
+- Desbordamiento horizontal: no detectado en 375 × 812 ni 812 × 375 con movimiento reducido.
 
 ## Impresión PDF
 
 - Manifiesto completo: 3 páginas A4 horizontales, una por maleta.
-- Bauchers de la maleta #1: 15 páginas A4 verticales, una por baucher.
+- Todos los bauchers del manifiesto importado: 38 páginas A4 verticales, una por baucher.
+- Maleta temporal con 16 bauchers: 2 páginas A4 horizontales.
+- El orden movido con el control `Bajar` apareció inmediatamente como primer renglón de la hoja de la maleta.
+
+Todos los manifiestos, maletas y bauchers creados para las pruebas fueron eliminados al terminar.
+
+## Ajustes posteriores
+
+- El baucher se amplió a `170mm` de ancho, manteniendo sus columnas y alturas proporcionales dentro del A4 vertical.
+- Después de crear un baucher se verificó una confirmación de solo lectura con el número de dirección, dirección completa y teléfono asignados por la API.

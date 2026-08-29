@@ -61,5 +61,21 @@ async def ensure_hierarchy(database) -> None:
 
         await database.shipments.update_one(
             {"_id": shipment["_id"]},
-            {"$set": {"manifest_id": manifest_id, "bag_id": str(bag["_id"]) }},
+            {"$set": {"manifest_id": manifest_id, "bag_id": str(bag["_id"])}},
         )
+
+    async for bag in database.bags.find({}):
+        bag_id = str(bag["_id"])
+        highest = await database.shipments.find_one(
+            {"bag_id": bag_id, "print_order": {"$exists": True}},
+            sort=[("print_order", -1)],
+        )
+        next_order = int(highest.get("print_order", 0) if highest else 0) + 1
+        missing = database.shipments.find(
+            {"bag_id": bag_id, "print_order": {"$exists": False}}
+        ).sort("created_at", 1)
+        async for shipment in missing:
+            await database.shipments.update_one(
+                {"_id": shipment["_id"]}, {"$set": {"print_order": next_order}}
+            )
+            next_order += 1

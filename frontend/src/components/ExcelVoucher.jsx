@@ -1,9 +1,3 @@
-function displayDate(value) {
-  if (!value) return ''
-  const [year, month, day] = value.split('-')
-  return `${day}-${month}-${year}`
-}
-
 export default function ExcelVoucher({ shipment, batch = false }) {
   if (!shipment) return null
 
@@ -33,11 +27,6 @@ export default function ExcelVoucher({ shipment, batch = false }) {
       <div className="excel-voucher__row excel-voucher__content">
         <span>Content</span><strong>{shipment.contents}</strong>
       </div>
-      <footer>
-        <span>Atendido: <strong>{shipment.attendant}</strong></span>
-        <span>DATE: <strong>{displayDate(shipment.shipment_date)}</strong></span>
-      </footer>
     </article>
   )
 }
-

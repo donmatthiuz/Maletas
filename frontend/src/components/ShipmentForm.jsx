@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Languages, LoaderCircle, Save } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Languages, LoaderCircle, MapPin, Save, Shuffle } from 'lucide-react'
 import { api } from '../api'
 
 const emptyForm = {
@@ -10,7 +10,6 @@ const emptyForm = {
 
 export default function ShipmentForm({
   shipment,
-  addresses,
   onSaved,
   notify,
   printMode = false,
@@ -52,11 +51,6 @@ export default function ShipmentForm({
     setError('')
   }, [shipment, manifestId, bagId, bagNumber, manifestDate, attendant])
 
-  const selectedAddress = useMemo(
-    () => addresses.find((address) => String(address.number) === String(form.address_number)),
-    [addresses, form.address_number],
-  )
-
   const update = (event) => {
     if (event.target.name === 'contents') setTranslated(false)
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }))
@@ -81,10 +75,10 @@ export default function ShipmentForm({
     event.preventDefault()
     setError('')
     setSaving(true)
+    const { address_number: _addressNumber, ...editableForm } = form
     const payload = {
-      ...form,
+      ...editableForm,
       bag_number: Number(form.bag_number),
-      address_number: Number(form.address_number),
       translate_contents: !translated,
     }
     try {
@@ -115,14 +109,11 @@ export default function ShipmentForm({
       <div className="form-grid form-grid--2">
         <label><span>Nombre de quien envía *</span><input name="shipper_name" value={form.shipper_name} onChange={update} required /></label>
         <label><span>Nombre de quien recibe *</span><input name="consignee_name" value={form.consignee_name} onChange={update} required /></label>
-        <label><span>Dirección en Guatemala *</span><input name="shipper_address" value={form.shipper_address} onChange={update} required /></label>
-        <label><span>Dirección de destino *</span>
-          <select name="address_number" value={form.address_number} onChange={update} required>
-            <option value="">Selecciona del directorio</option>
-            {addresses.map((address) => <option key={address.id} value={address.number}>{address.number} · {address.address}</option>)}
-          </select>
-          {selectedAddress && <small>{selectedAddress.phone}</small>}
-        </label>
+        <label className="form-span"><span>Dirección en Guatemala *</span><input name="shipper_address" value={form.shipper_address} onChange={update} required /></label>
+        <div className="address-assignment form-span">
+          <span aria-hidden="true">{shipment ? <MapPin /> : <Shuffle />}</span>
+          <div>{shipment ? <><strong>Dirección de destino asignada</strong><p>{shipment.consignee_address} · {shipment.phone}</p></> : <><strong>Asignación automática</strong><p>Al guardar se elegirá una dirección aleatoria que todavía no se haya usado en este manifiesto.</p></>}</div>
+        </div>
       </div>
     </fieldset>
     <fieldset>
