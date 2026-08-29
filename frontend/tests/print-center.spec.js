@@ -17,22 +17,60 @@ test('separa las tareas y mantiene las acciones en su contexto', async ({ page }
   await expect(page.getByRole('heading', { name: 'Direcciones de destino' })).toBeVisible()
 })
 
-test('oculta el sidebar, amplía el manifiesto y abre los bauchers con doble clic', async ({ page }) => {
+test('colapsa el sidebar a sus iconos, amplía el contenido y abre los bauchers con doble clic', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/')
 
-  await page.getByRole('button', { name: 'Ocultar menú lateral' }).click()
-  await expect(page.getByRole('button', { name: 'Mostrar menú lateral' })).toBeVisible()
-  await expect(page.locator('.workspace-shell')).toHaveClass(/workspace-shell--sidebar-collapsed/)
-  await page.getByRole('button', { name: 'Mostrar menú lateral' }).click()
-  await expect(page.getByRole('button', { name: 'Ocultar menú lateral' })).toBeVisible()
+  const sidebar = page.locator('.workspace-sidebar')
+  const content = page.locator('.workspace-content')
+  const expandedSidebarWidth = await sidebar.evaluate((element) => element.getBoundingClientRect().width)
+  const expandedContentWidth = await content.evaluate((element) => element.getBoundingClientRect().width)
 
-  await page.getByRole('button', { name: 'Ver manifiesto en grande' }).click()
+  await page.getByRole('button', { name: 'Contraer menú lateral' }).click()
+  await expect(page.locator('.workspace-shell')).toHaveClass(/workspace-shell--sidebar-collapsed/)
+  await expect(page.getByRole('button', { name: 'Manifiestos y maletas' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Bauchers', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Direcciones', exact: true })).toBeVisible()
+  await expect.poll(() => sidebar.evaluate((element) => element.getBoundingClientRect().width)).toBeLessThan(90)
+  await expect.poll(() => content.evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(expandedContentWidth)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1440)
+
+  await page.getByRole('button', { name: 'Expandir menú lateral' }).click()
+  await expect.poll(() => sidebar.evaluate((element) => element.getBoundingClientRect().width)).toBeCloseTo(expandedSidebarWidth, 0)
+  await expect(page.getByRole('button', { name: 'Contraer menú lateral' })).toBeVisible()
+
+  await expect(page.getByText('Doble clic para ampliar').first()).toBeVisible()
+  await page.getByRole('button', { name: /Ampliar Maleta/ }).first().dblclick()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('dialog').locator('.excel-manifest').first()).toBeVisible()
   await page.getByRole('button', { name: 'Cerrar', exact: true }).click()
 
+  await page.getByRole('button', { name: /Ampliar Maleta/ }).first().focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.getByRole('button', { name: 'Cerrar', exact: true }).click()
+
   await page.locator('.bag-list > button:not(.bag-list__add)').first().dblclick()
   await expect(page.getByRole('heading', { name: 'Orden y edición de bauchers' })).toBeVisible()
+})
+
+test('ajusta la hoja de la maleta al ancho disponible sin desplazamiento horizontal', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto('/')
+
+  const previewPage = page.locator('.manifest-preview-page').first()
+  const manifest = previewPage.locator('.excel-manifest')
+  await expect(manifest).toBeVisible()
+  await expect.poll(() => previewPage.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  expect(await manifest.evaluate((element) => Number.parseFloat(getComputedStyle(element).zoom))).toBeLessThan(1)
+
+  await page.getByRole('button', { name: 'Contraer menú lateral' }).click()
+  await expect.poll(() => previewPage.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+
+  await page.setViewportSize({ width: 375, height: 812 })
+  await expect.poll(() => previewPage.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await page.setViewportSize({ width: 812, height: 375 })
+  await expect.poll(() => previewPage.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
 })
 
 test('busca un baucher por código en todas las maletas del manifiesto', async ({ page }) => {
@@ -57,6 +95,9 @@ test('no produce desbordamiento horizontal en móvil', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' })
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto('/')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
+  await page.getByRole('button', { name: 'Contraer menú lateral' }).click()
+  await expect(page.getByRole('button', { name: 'Bauchers', exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
   await page.getByRole('button', { name: 'Bauchers', exact: true }).click()
   expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)

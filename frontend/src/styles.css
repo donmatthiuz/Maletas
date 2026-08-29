@@ -359,22 +359,26 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
 
 /* Centro de documentos: navegación por tarea y jerarquía manifiesto > maleta > baucher. */
 .workspace-shell { min-height: 100dvh; display: grid; grid-template-columns: 240px minmax(0, 1fr); background: #f3f6fa; transition: grid-template-columns var(--transition); }
-.workspace-shell--sidebar-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
-.workspace-sidebar { position: sticky; top: 0; z-index: 30; width: 240px; height: 100dvh; padding: 22px 14px; color: #dce7f7; background: linear-gradient(180deg, var(--navy-950), #091f40 72%, #0d2c58); transition: transform var(--transition), opacity var(--transition); }
-.workspace-shell--sidebar-collapsed .workspace-sidebar { position: fixed; inset: 0 auto 0 0; visibility: hidden; opacity: 0; pointer-events: none; transform: translateX(-100%); }
+.workspace-shell--sidebar-collapsed { grid-template-columns: 72px minmax(0, 1fr); }
+.workspace-sidebar { position: sticky; top: 0; z-index: 30; width: 100%; min-width: 0; height: 100dvh; overflow: hidden; padding: 22px 14px; color: #dce7f7; background: linear-gradient(180deg, var(--navy-950), #091f40 72%, #0d2c58); transition: padding var(--transition); }
 .workspace-sidebar .print-brand { min-height: 64px; margin: 0 8px 30px; color: white; }
 .workspace-sidebar .print-brand small { color: #9db2cf; }
 .workspace-sidebar .print-brand > div { min-width: 0; flex: 1; }
 .workspace-sidebar__toggle { flex: none; color: #dce7f7; border-color: rgb(255 255 255 / 12%); }
 .workspace-sidebar__toggle:hover { color: white; background: rgb(255 255 255 / 8%); border-color: rgb(255 255 255 / 20%); }
-.workspace-sidebar-reveal { width: min(1540px, 100%); margin: 0 auto; padding: 16px clamp(18px, 3vw, 44px) 0; }
-.workspace-sidebar-reveal .button { min-width: 154px; }
 .workspace-nav { display: grid; gap: 7px; }
 .workspace-nav button { min-height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 13px; color: #b9c9df; background: transparent; border: 1px solid transparent; border-radius: 10px; text-align: left; font-weight: 600; transition: color var(--transition), background var(--transition), border-color var(--transition); }
 .workspace-nav button:hover { color: white; background: rgb(255 255 255 / 7%); }
 .workspace-nav button.active { color: white; background: rgb(37 99 184 / 36%); border-color: rgb(114 169 234 / 18%); box-shadow: inset 3px 0 0 var(--orange-500); }
 .workspace-nav svg { width: 19px; }
-.workspace-content { min-width: 0; }
+.workspace-shell--sidebar-collapsed .workspace-sidebar { padding-inline: 10px; }
+.workspace-shell--sidebar-collapsed .workspace-sidebar .print-brand { min-height: 112px; flex-direction: column; gap: 10px; margin-inline: 0; }
+.workspace-shell--sidebar-collapsed .workspace-sidebar .print-brand > span { width: 40px; height: 40px; }
+.workspace-shell--sidebar-collapsed .workspace-sidebar .print-brand > div,
+.workspace-shell--sidebar-collapsed .workspace-nav button span { display: none; }
+.workspace-shell--sidebar-collapsed .workspace-nav button { justify-content: center; gap: 0; padding-inline: 0; }
+.workspace-shell--sidebar-collapsed .workspace-nav button.active { box-shadow: inset 3px 0 0 var(--orange-500); }
+.workspace-content { width: 100%; min-width: 0; max-width: 100%; overflow-x: clip; }
 .screen-content { width: min(1540px, 100%); margin: 0 auto; padding: 32px clamp(18px, 3vw, 44px) 56px; }
 .section-heading > .button { flex: none; }
 .document-controls { align-items: end; }
@@ -397,8 +401,14 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
 .bag-list > button small { color: var(--slate-500); font-size: 11px; }
 .bag-list > .bag-list__add { display: flex; justify-content: center; color: var(--blue-700); border-top: 1px solid var(--slate-100); border-radius: 0; font-weight: 650; }
 .manifest-preview-stack { min-width: 0; display: grid; gap: 24px; }
-.manifest-preview-page { min-width: 0; overflow: auto; padding: 14px; background: #dfe5ec; border-radius: 12px; }
-.manifest-preview-page__label { position: sticky; left: 0; width: max-content; margin: 0 0 9px; padding: 4px 9px; color: var(--slate-600); background: white; border-radius: 999px; font-size: 10px; font-weight: 700; box-shadow: var(--shadow-sm); }
+.manifest-preview-page { min-width: 0; overflow: hidden; padding: 14px; background: #dfe5ec; border-radius: 12px; }
+.manifest-preview-page--interactive { cursor: zoom-in; transition: background var(--transition), box-shadow var(--transition); }
+.manifest-preview-page--interactive:hover { background: #d7e0ea; box-shadow: inset 0 0 0 2px rgb(37 99 184 / 16%); }
+.manifest-preview-page--interactive:active { background: #cfd9e4; }
+.manifest-preview-page__label { position: sticky; left: 0; width: max-content; display: inline-flex; align-items: center; gap: 8px; margin: 0 0 9px; padding: 4px 9px; color: var(--slate-600); background: white; border-radius: 999px; font-size: 10px; font-weight: 700; box-shadow: var(--shadow-sm); }
+.manifest-preview-page__shortcut { display: inline-flex; align-items: center; gap: 4px; padding-left: 8px; color: var(--blue-700); border-left: 1px solid var(--slate-200); }
+.manifest-preview-page__shortcut svg { width: 12px; height: 12px; }
+.manifest-preview-page .excel-manifest { width: 1077px; min-width: 1077px; zoom: var(--manifest-preview-scale, 1); }
 .document-stage__canvas > .manifest-preview-stack { width: 100%; }
 .package-summary { max-height: calc(100dvh - 220px); }
 .package-summary > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -489,8 +499,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
   .workspace-nav button { min-width: 0; min-height: 44px; justify-content: center; padding: 0 7px; font-size: 11px; }
   .workspace-nav button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .workspace-nav svg { width: 17px; }
-  .workspace-sidebar-reveal { padding: 12px 14px 0; }
-  .workspace-sidebar-reveal .button { width: 100%; }
+  .workspace-shell--sidebar-collapsed .workspace-sidebar { width: 100%; padding: 10px 12px; }
+  .workspace-shell--sidebar-collapsed .workspace-sidebar .print-brand { min-height: 45px; flex-direction: row; gap: 12px; margin: 0 4px 8px; }
+  .workspace-shell--sidebar-collapsed .workspace-sidebar .print-brand > span { width: 36px; height: 36px; }
+  .workspace-shell--sidebar-collapsed .workspace-sidebar__toggle { margin-left: auto; }
+  .workspace-shell--sidebar-collapsed .workspace-nav button span { display: none; }
   .screen-content { padding: 20px 14px 42px; }
   .section-heading { align-items: stretch; flex-direction: column; }
   .section-heading > .button { width: 100%; }
@@ -499,7 +512,6 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
   .bag-list { grid-template-columns: 1fr; }
   .bag-list header, .bag-list > .bag-list__add { grid-column: auto; }
   .manifest-preview-page { overflow: hidden; padding: 10px; }
-  .manifest-preview-page .excel-manifest { width: 1077px; zoom: .27; }
   .voucher-sort-item { grid-template-columns: 34px 28px minmax(0, 1fr); }
   .voucher-sort-actions { grid-column: 3; grid-template-columns: repeat(4, 34px); }
   .package-summary > header { align-items: stretch; flex-direction: column; }
@@ -680,7 +692,6 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
   .document-stage { min-height: 0; }
   .document-stage__canvas { min-height: 0; padding: 16px; }
   .document-stage__canvas--manifest { display: block; min-height: 340px; overflow: hidden; }
-  .document-stage__canvas--manifest .excel-manifest { min-width: 850px; zoom: .34; }
   .excel-voucher { font-size: 12px; }
   .excel-voucher__heading { font-size: 12px; }
   .excel-voucher__row > * { padding: 6px; }
@@ -756,11 +767,6 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
 .excel-manifest { min-width: 1077px; }
 .excel-manifest__attendant, .excel-manifest__meta { font-size: 16.56pt; }
 .excel-manifest__row > span { font-size: 8.74pt; }
-
-@media (max-width: 760px) {
-  .manifest-preview-page .excel-manifest,
-  .document-stage__canvas--manifest .excel-manifest { width: 1077px; min-width: 1077px; zoom: .27; }
-}
 
 @media print {
   body.print-manifest-document .excel-manifest__attendant,

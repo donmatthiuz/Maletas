@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Expand, FileSpreadsheet, FolderPlus, Luggage, MapPin, MapPinned, PackagePlus, PanelLeftClose, PanelLeftOpen, Plus, Printer, Search, TicketCheck, Trash2 } from 'lucide-react'
 import { api, queryString } from '../api'
 import ExcelManifest, { paginateManifest } from '../components/ExcelManifest'
@@ -247,16 +247,15 @@ export default function PrintCenterPage({ notify }) {
 
   return <div className={`workspace-shell ${sidebarCollapsed ? 'workspace-shell--sidebar-collapsed' : ''}`}>
     <aside className="workspace-sidebar">
-      <div className="print-brand"><span aria-hidden="true"><Luggage /></span><div><strong>Maletas</strong><small>Nor Oriente</small></div><button className="icon-button workspace-sidebar__toggle" type="button" onClick={() => setSidebarCollapsed(true)} aria-label="Ocultar menú lateral" aria-expanded="true"><PanelLeftClose /></button></div>
+      <div className="print-brand"><span aria-hidden="true"><Luggage /></span><div><strong>Maletas</strong><small>Nor Oriente</small></div><button className="icon-button workspace-sidebar__toggle" type="button" onClick={() => setSidebarCollapsed((current) => !current)} aria-label={sidebarCollapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'} aria-expanded={!sidebarCollapsed}>{sidebarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}</button></div>
       <nav className="workspace-nav" aria-label="Secciones principales">
-        <button className={section === 'manifests' ? 'active' : ''} onClick={() => setSection('manifests')}><FileSpreadsheet /><span>Manifiestos y maletas</span></button>
-        <button className={section === 'vouchers' ? 'active' : ''} onClick={() => setSection('vouchers')}><TicketCheck /><span>Bauchers</span></button>
-        <button className={section === 'addresses' ? 'active' : ''} onClick={() => setSection('addresses')}><MapPinned /><span>Direcciones</span></button>
+        <button className={section === 'manifests' ? 'active' : ''} onClick={() => setSection('manifests')} aria-label="Manifiestos y maletas" title={sidebarCollapsed ? 'Manifiestos y maletas' : undefined}><FileSpreadsheet /><span>Manifiestos y maletas</span></button>
+        <button className={section === 'vouchers' ? 'active' : ''} onClick={() => setSection('vouchers')} aria-label="Bauchers" title={sidebarCollapsed ? 'Bauchers' : undefined}><TicketCheck /><span>Bauchers</span></button>
+        <button className={section === 'addresses' ? 'active' : ''} onClick={() => setSection('addresses')} aria-label="Direcciones" title={sidebarCollapsed ? 'Direcciones' : undefined}><MapPinned /><span>Direcciones</span></button>
       </nav>
     </aside>
 
     <main id="main-content" className="workspace-content">
-      {sidebarCollapsed && <div className="workspace-sidebar-reveal"><button className="button button--secondary" type="button" onClick={() => setSidebarCollapsed(false)} aria-label="Mostrar menú lateral" aria-expanded="false"><PanelLeftOpen /><span>Mostrar menú</span></button></div>}
       {section === 'addresses' ? <AddressesView notify={notify} /> : section === 'manifests' ? (
         <div className="screen-content">
           <div className="section-heading"><div><span className="section-kicker">DOCUMENTOS</span><h1>Manifiestos y maletas</h1><p>Crea manifiestos, agrega sus maletas y revisa todas sus hojas antes de imprimir.</p></div><button className="button button--primary" onClick={() => { setStructureError(''); setManifestOpen(true) }}><FolderPlus /> Nuevo manifiesto</button></div>
@@ -265,7 +264,7 @@ export default function PrintCenterPage({ notify }) {
             <section className="manifest-actions"><div><strong>{selectedManifest?.name}</strong><span>{bags.length} maletas · {selectedManifest?.voucher_count || 0} bauchers</span></div><div><button className="button button--secondary" disabled={!bags.length} onClick={openExpandedManifest}><Expand /> Ver manifiesto en grande</button><button className="button button--secondary" disabled={!shipments.length} onClick={() => printManifest([selectedBag])}><Printer /> Imprimir esta maleta</button><button className="button button--secondary" disabled={!bags.length} onClick={printAllManifestVouchers}><TicketCheck /> Imprimir todos los bauchers</button><button className="button button--primary" disabled={!bags.length} onClick={() => printManifest()}><FileSpreadsheet /> Imprimir manifiesto completo</button></div></section>
             <section className="bag-overview">
               <div className="bag-list"><header><span className="section-kicker">MALETAS</span><h2>Contenido del manifiesto</h2><p>Doble clic en una maleta para abrir sus bauchers.</p></header>{bags.map((bag) => <button key={bag.id} className={bag.id === selectedBagId ? 'active' : ''} onClick={() => setSelectedBagId(bag.id)} onDoubleClick={() => openBagVouchers(bag.id)} title="Doble clic para abrir los bauchers"><span><Luggage /></span><span><strong>{bag.name || `Maleta #${bag.number}`}</strong><small>{bag.voucher_count} bauchers · {Math.max(1, Math.ceil(bag.voucher_count / 15))} hojas</small></span></button>)}<button className="bag-list__add" onClick={openBagForm}><Plus /> Agregar maleta</button></div>
-              <ManifestPreview loading={loading} pages={previewPages} selectedBag={selectedBag} selectedManifest={selectedManifest} keyPrefix={selectedBagId} />
+              <ManifestPreview loading={loading} pages={previewPages} selectedBag={selectedBag} selectedManifest={selectedManifest} keyPrefix={selectedBagId} onOpenExpanded={openExpandedManifest} />
             </section>
           </>}
         </div>
@@ -280,7 +279,7 @@ export default function PrintCenterPage({ notify }) {
           </section>
           {!selectedBag ? <section className="structure-empty"><Luggage /><h2>Selecciona una maleta</h2><p>Elige o crea un manifiesto y una maleta para administrar sus bauchers.</p></section> : <section className="print-workbench">
             <aside className="package-summary"><header><div><span className="section-kicker">ORDEN DE IMPRESIÓN</span><h2>{selectedBag.name || `Maleta #${selectedBag.number}`}</h2><p>{reordering ? 'Guardando orden…' : `${shipments.length} bauchers`}</p></div><button className="button button--soft" disabled={!shipments.length} onClick={printBagVouchers}><Printer /> Imprimir bauchers maleta</button></header>{loading ? <Loading rows={6} /> : shipments.length ? <SortableVoucherList shipments={shipments} selectedId={selectedShipment?.id} onSelect={(shipment) => { setSelectedId(shipment.id); setPreview('voucher') }} onEdit={setEditingShipment} onDelete={setDeletingShipment} onReorder={reorderShipments} /> : <div className="print-empty"><strong>No hay bauchers</strong><span>Agrega el primer baucher de esta maleta.</span><button className="button button--primary" onClick={() => setFormOpen(true)}><Plus /> Agregar baucher</button></div>}</aside>
-            <div className="document-stage"><header className="document-stage__toolbar"><div className="document-tabs" role="tablist" aria-label="Documento a previsualizar"><button role="tab" aria-selected={preview === 'manifest'} className={preview === 'manifest' ? 'active' : ''} onClick={() => setPreview('manifest')}><FileSpreadsheet /> Hoja de maleta</button><button role="tab" aria-selected={preview === 'voucher'} className={preview === 'voucher' ? 'active' : ''} onClick={() => setPreview('voucher')}><TicketCheck /> Baucher</button></div>{preview === 'voucher' && selectedShipment && <button className="button button--secondary" onClick={printSingleVoucher}><Printer /> Imprimir este baucher</button>}</header><div className={`document-stage__canvas document-stage__canvas--${preview}`}>{loading ? <Loading rows={5} /> : preview === 'manifest' ? <ManifestPreview pages={previewPages} selectedBag={selectedBag} selectedManifest={selectedManifest} keyPrefix={`${selectedBagId}-voucher`} /> : selectedShipment ? <ExcelVoucher shipment={selectedShipment} /> : <div className="print-empty"><strong>Agrega o selecciona un baucher</strong></div>}</div></div>
+            <div className="document-stage"><header className="document-stage__toolbar"><div className="document-tabs" role="tablist" aria-label="Documento a previsualizar"><button role="tab" aria-selected={preview === 'manifest'} className={preview === 'manifest' ? 'active' : ''} onClick={() => setPreview('manifest')}><FileSpreadsheet /> Hoja de maleta</button><button role="tab" aria-selected={preview === 'voucher'} className={preview === 'voucher' ? 'active' : ''} onClick={() => setPreview('voucher')}><TicketCheck /> Baucher</button></div>{preview === 'voucher' && selectedShipment && <button className="button button--secondary" onClick={printSingleVoucher}><Printer /> Imprimir este baucher</button>}</header><div className={`document-stage__canvas document-stage__canvas--${preview}`}>{loading ? <Loading rows={5} /> : preview === 'manifest' ? <ManifestPreview pages={previewPages} selectedBag={selectedBag} selectedManifest={selectedManifest} keyPrefix={`${selectedBagId}-voucher`} onOpenExpanded={openExpandedManifest} /> : selectedShipment ? <ExcelVoucher shipment={selectedShipment} /> : <div className="print-empty"><strong>Agrega o selecciona un baucher</strong></div>}</div></div>
           </section>}
         </div>
       )}
@@ -307,6 +306,41 @@ function EmptyHierarchy({ type, onAction }) {
   return <section className="structure-empty">{manifest ? <FolderPlus /> : <Luggage />}<h2>{manifest ? 'Crea tu primer manifiesto' : 'Este manifiesto todavía no tiene maletas'}</h2><p>{manifest ? 'Después podrás agregarle maletas y registrar los bauchers de cada una.' : 'Agrega una maleta para comenzar a registrar bauchers.'}</p><button className="button button--primary" onClick={onAction}><Plus /> {manifest ? 'Nuevo manifiesto' : 'Agregar maleta'}</button></section>
 }
 
-function ManifestPreview({ loading = false, pages, selectedBag, selectedManifest, keyPrefix }) {
-  return <div className="manifest-preview-stack">{loading ? <Loading rows={6} /> : pages.map((pageShipments, pageIndex) => <div className="manifest-preview-page" key={`${keyPrefix}-${pageIndex}`}><div className="manifest-preview-page__label">Hoja {pageIndex + 1} de {pages.length}</div><ExcelManifest shipments={pageShipments} bagNumber={selectedBag.number} manifestDate={selectedManifest.manifest_date} attendant={selectedManifest.attendant} /></div>)}</div>
+function ManifestPreview({ loading = false, pages, selectedBag, selectedManifest, keyPrefix, onOpenExpanded }) {
+  const previewRef = useRef(null)
+
+  useLayoutEffect(() => {
+    const preview = previewRef.current
+    if (!preview || loading) return undefined
+
+    let animationFrame = 0
+    const fitManifestToPreview = () => {
+      const page = preview.querySelector('.manifest-preview-page')
+      if (!page) return
+      const styles = window.getComputedStyle(page)
+      const horizontalPadding = Number.parseFloat(styles.paddingLeft) + Number.parseFloat(styles.paddingRight)
+      const availableWidth = Math.max(0, page.clientWidth - horizontalPadding)
+      preview.style.setProperty('--manifest-preview-scale', String(Math.min(1, availableWidth / 1077)))
+    }
+    const scheduleFit = () => {
+      window.cancelAnimationFrame(animationFrame)
+      animationFrame = window.requestAnimationFrame(fitManifestToPreview)
+    }
+    const resizeObserver = new ResizeObserver(scheduleFit)
+    resizeObserver.observe(preview)
+    fitManifestToPreview()
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame)
+      resizeObserver.disconnect()
+    }
+  }, [loading, pages.length])
+
+  const openWithKeyboard = (event) => {
+    if (!onOpenExpanded || (event.key !== 'Enter' && event.key !== ' ')) return
+    event.preventDefault()
+    onOpenExpanded()
+  }
+
+  return <div className="manifest-preview-stack" ref={previewRef}>{loading ? <Loading rows={6} /> : pages.map((pageShipments, pageIndex) => <div className={`manifest-preview-page ${onOpenExpanded ? 'manifest-preview-page--interactive' : ''}`} key={`${keyPrefix}-${pageIndex}`} onDoubleClick={onOpenExpanded} onKeyDown={openWithKeyboard} role={onOpenExpanded ? 'button' : undefined} tabIndex={onOpenExpanded ? 0 : undefined} aria-label={onOpenExpanded ? `Ampliar ${selectedBag.name || `Maleta #${selectedBag.number}`}, hoja ${pageIndex + 1} de ${pages.length}` : undefined} title={onOpenExpanded ? 'Doble clic para ver el manifiesto en grande' : undefined}><div className="manifest-preview-page__label"><span>Hoja {pageIndex + 1} de {pages.length}</span>{onOpenExpanded && <span className="manifest-preview-page__shortcut"><Expand aria-hidden="true" /> Doble clic para ampliar</span>}</div><ExcelManifest shipments={pageShipments} bagNumber={selectedBag.number} manifestDate={selectedManifest.manifest_date} attendant={selectedManifest.attendant} /></div>)}</div>
 }
