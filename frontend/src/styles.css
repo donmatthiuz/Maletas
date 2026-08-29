@@ -578,7 +578,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
 .document-tabs button svg { width: 17px; }
 .document-tabs button.active { color: var(--navy-800); background: white; box-shadow: var(--shadow-sm); }
 .document-stage__canvas { min-height: 580px; overflow: auto; display: grid; place-items: start center; padding: clamp(18px, 4vw, 42px); background: #dfe5ec; }
-.document-stage__canvas--voucher { place-items: center; }
+.document-stage__canvas--voucher { place-items: center; padding-inline: clamp(16px, 2vw, 24px); }
 .print-empty { min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; color: var(--slate-500); text-align: center; }
 .print-empty strong { color: var(--slate-700); }
 .print-only { display: none; }
@@ -695,7 +695,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
   body.print-manifest-document .excel-manifest--batch:last-child { break-after: auto; }
 
   body.print-vouchers-document .excel-voucher,
-  body.print-single-voucher .excel-voucher { page: voucher-page; width: 178mm; margin: 0 auto; border: .3mm solid #000; box-shadow: none; font-size: 15pt; }
+  body.print-single-voucher .excel-voucher { page: voucher-page; width: 184mm; margin: 0 auto; border: .3mm solid #000; box-shadow: none; font-size: 15pt; }
   body.print-vouchers-document .excel-voucher { break-after: page; }
   body.print-vouchers-document .excel-voucher:last-child { break-after: auto; }
   body.print-vouchers-document .excel-voucher__row,
@@ -709,7 +709,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
 }
 
 /* Este bloque debe quedar al final: prevalece sobre el formato aproximado legado. */
-.excel-voucher { width: min(100%, 642.5px); font-size: 15pt; line-height: 1; }
+.excel-voucher { width: min(100%, 695.4px); font-size: 15pt; line-height: 1; }
 .excel-voucher__row { height: 19.5pt; min-height: 0; grid-template-columns: 104fr 382fr; }
 .excel-voucher__row > * { align-items: flex-end; overflow: hidden; padding: 0 2px 1px; white-space: nowrap; }
 .excel-voucher__heading { height: 17.25pt; grid-template-columns: 104fr 180fr 165fr 37fr; font-size: 15pt; }
@@ -731,7 +731,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
   body.print-manifest-document .excel-manifest__meta { font-size: 16.56pt; }
   body.print-manifest-document .excel-manifest__row > span { font-size: 8.74pt; }
   body.print-vouchers-document .excel-voucher,
-  body.print-single-voucher .excel-voucher { width: 170mm; margin: 0; border: .264583mm solid #000; font-size: 15pt; line-height: 1; }
+  body.print-single-voucher .excel-voucher { width: 184mm; margin: 0; border: .264583mm solid #000; font-size: 15pt; line-height: 1; }
   body.print-vouchers-document .excel-voucher__row,
   body.print-single-voucher .excel-voucher__row { height: 19.5pt; min-height: 0; grid-template-columns: 104fr 382fr; border-bottom-width: .264583mm; }
   body.print-vouchers-document .excel-voucher__heading,

@@ -83,5 +83,5 @@ Todos los manifiestos, maletas y bauchers creados para las pruebas fueron elimin
 
 ## Ajustes posteriores
 
-- El baucher se amplió a `170mm` de ancho, manteniendo sus columnas y alturas proporcionales dentro del A4 vertical.
+- El baucher se amplió a `184mm` de ancho, manteniendo sus columnas y alturas proporcionales dentro del A4 vertical y usando márgenes laterales de `13mm` para dar más espacio a las direcciones.
 - Después de crear un baucher se verificó una confirmación de solo lectura con el número de dirección, dirección completa y teléfono asignados por la API.

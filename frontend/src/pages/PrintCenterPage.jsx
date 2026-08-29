@@ -114,16 +114,16 @@ export default function PrintCenterPage({ notify }) {
       const vouchers = groups.flat()
       setVouchersToPrint(vouchers)
       if (!vouchers.length) { notify('Este manifiesto todavía no tiene bauchers.', 'error'); return }
-      deferPrint('print-vouchers-document', 'size: A4 portrait !important; margin: 0.75in 0.7in !important;')
+      deferPrint('print-vouchers-document', 'size: A4 portrait !important; margin: 0.75in 13mm !important;')
     } catch (error) { notify(error.message, 'error') }
   }
 
   const printBagVouchers = () => {
     if (!shipments.length) return
     setVouchersToPrint(shipments)
-    deferPrint('print-vouchers-document', 'size: A4 portrait !important; margin: 0.75in 0.7in !important;')
+    deferPrint('print-vouchers-document', 'size: A4 portrait !important; margin: 0.75in 13mm !important;')
   }
-  const printSingleVoucher = () => selectedShipment && deferPrint('print-single-voucher', 'size: A4 portrait !important; margin: 0.75in 0.7in !important;')
+  const printSingleVoucher = () => selectedShipment && deferPrint('print-single-voucher', 'size: A4 portrait !important; margin: 0.75in 13mm !important;')
 
   const refreshHierarchy = async (shipmentId = '') => {
     await Promise.all([loadShipments(selectedBagId), loadBags(selectedManifestId), loadManifests(selectedManifestId)])

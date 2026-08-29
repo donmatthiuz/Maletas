@@ -37,7 +37,7 @@ Fecha de inicio: 2026-08-28
 
 - Orientación: vertical.
 - Papel: A4.
-- Márgenes: izquierda/derecha 0.7 pulgadas; arriba/abajo 0.75; encabezado/pie 0.3.
+- Márgenes originales: izquierda/derecha 0.7 pulgadas; arriba/abajo 0.75; encabezado/pie 0.3.
 - Rango impreso por la macro: `A1:D7`.
 - Anchos de columnas A:D:
   - 14.85546875
@@ -73,6 +73,6 @@ Fecha de inicio: 2026-08-28
 ## Correspondencia de impresión verificada
 
 - Manifiesto: A4 horizontal, márgenes de `0.2362204724in`, ocho columnas con las proporciones del XLSM y 15 filas por página.
-- Baucher: A4 vertical, márgenes verticales `0.75in`, horizontales `0.7in`, Calibri 15 pt y alturas exactas de las siete filas. A solicitud posterior, el ancho se amplió de los `128.6mm` originales a `170mm`, conservando las proporciones de las cuatro columnas y dejando margen dentro del área imprimible A4.
+- Baucher: A4 vertical, márgenes verticales `0.75in`, horizontales `13mm`, Calibri 15 pt y alturas exactas de las siete filas. A solicitud posterior, el ancho se amplió de los `128.6mm` originales a `184mm`, conservando las proporciones de las cuatro columnas y aprovechando el área imprimible A4 para mostrar las direcciones completas.
 - El PDF no incluye `Atendido`, la fecha auxiliar ni una marca `Página N`, porque están fuera del rango `A1:D7` o pertenecen a la vista de saltos de Excel.
 - Prueba temporal de 16 bauchers: dos hojas A4 horizontales; después de bajar `MP-01`, `MP-02` apareció como primer renglón de la hoja.

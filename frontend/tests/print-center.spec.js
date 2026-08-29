@@ -28,6 +28,22 @@ test('no produce desbordamiento horizontal en móvil', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
 })
 
+test('muestra el baucher ancho sin recortar la dirección', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Bauchers', exact: true }).click()
+  await page.locator('.voucher-sort-main').first().click()
+
+  const voucher = page.locator('.document-stage__canvas--voucher .excel-voucher')
+  await expect(voucher).toBeVisible()
+  expect(await voucher.evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(690)
+
+  for (const rowIndex of [2, 4]) {
+    const address = voucher.locator('.excel-voucher__row').nth(rowIndex).locator('strong')
+    expect(await address.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  }
+})
+
 test('genera manifiesto completo y todos los bauchers como PDF', async ({ page }) => {
   await page.goto('/')
   await page.evaluate(() => { window.print = () => {} })
