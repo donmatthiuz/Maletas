@@ -27,6 +27,17 @@ mongosh "mongodb+srv://USUARIO:CLAVE@CLUSTER.mongodb.net/?retryWrites=true&w=maj
 
 El script puede ejecutarse nuevamente sin duplicar colecciones ni índices.
 
+Después de actualizar desde una versión donde el remitente pertenecía al manifiesto,
+ejecuta la migración idempotente:
+
+```bash
+mongosh "mongodb+srv://USUARIO:CLAVE@CLUSTER.mongodb.net/?retryWrites=true&w=majority" \
+  --file mongo_produ/migrate-bag-attendants.js
+```
+
+La migración completa remitentes faltantes en las maletas, sincroniza sus bauchers
+y elimina el campo antiguo de los manifiestos.
+
 ## 3. Verificar
 
 ```bash
