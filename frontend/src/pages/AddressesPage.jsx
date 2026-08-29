@@ -7,7 +7,7 @@ import Modal from '../components/Modal'
 
 const empty = { number: '', address: '', phone: '' }
 
-export default function AddressesPage({ notify }) {
+export default function AddressesPage({ notify, onChanged }) {
   const [addresses, setAddresses] = useState([])
   const [search, setSearch] = useState('')
   const deferred = useDeferredValue(search)
@@ -28,7 +28,7 @@ export default function AddressesPage({ notify }) {
     event.preventDefault(); setSaving(true); setError('')
     try {
       await api(editing?.id ? `/addresses/${editing.id}` : '/addresses', { method: editing?.id ? 'PATCH' : 'POST', body: JSON.stringify({ ...form, number: Number(form.number) }) })
-      notify(editing?.id ? 'Dirección actualizada.' : 'Dirección agregada.'); close(); load()
+      notify(editing?.id ? 'Dirección actualizada.' : 'Dirección agregada.'); close(); load(); onChanged?.()
     } catch (e) { setError(e.message) } finally { setSaving(false) }
   }
 
@@ -46,4 +46,3 @@ export default function AddressesPage({ notify }) {
     </Modal>
   </div>
 }
-

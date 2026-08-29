@@ -356,3 +356,199 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
   .manifest-table { min-width: 0; }
   .manifest-table th { background: #0b2852 !important; color: white !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
+
+/* Centro de impresión: la aplicación usa color; los documentos conservan el Excel monocromático. */
+.print-center { min-height: 100dvh; background: #f3f6fa; }
+.print-center__header { min-height: 92px; display: grid; grid-template-columns: 220px 1fr auto; align-items: center; gap: 28px; padding: 16px clamp(22px, 4vw, 64px); background: white; border-bottom: 1px solid var(--slate-200); }
+.print-brand { display: flex; align-items: center; gap: 12px; }
+.print-brand > span { width: 44px; height: 44px; display: grid; place-items: center; color: white; background: var(--orange-500); border-radius: 11px; }
+.print-brand > div { display: grid; }
+.print-brand strong { color: var(--navy-950); font-size: 19px; line-height: 1.1; }
+.print-brand small { color: var(--slate-500); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.print-nav { justify-self: center; display: inline-flex; gap: 4px; padding: 4px; background: var(--slate-100); border-radius: 10px; }
+.print-nav button { min-height: 42px; display: inline-flex; align-items: center; gap: 8px; padding: 0 17px; color: var(--slate-600); background: transparent; border: 0; border-radius: 8px; font-weight: 650; transition: color var(--transition), background var(--transition), box-shadow var(--transition); }
+.print-nav button svg { width: 18px; }
+.print-nav button.active { color: var(--navy-800); background: white; box-shadow: var(--shadow-sm); }
+.print-center__title h1 { margin: 0; color: var(--slate-950); font-size: clamp(21px, 2vw, 27px); line-height: 1.2; }
+.print-center__title p { margin: 4px 0 0; color: var(--slate-500); font-size: 13px; }
+.print-center__main { width: min(1540px, 100%); margin: 0 auto; padding: 28px clamp(16px, 3vw, 44px) 52px; }
+.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
+.section-heading h1 { margin: 3px 0 2px; color: var(--slate-950); font-size: clamp(22px, 2.2vw, 30px); }
+.section-heading p { margin: 0; color: var(--slate-500); font-size: 13px; }
+.document-controls { display: flex; align-items: flex-end; gap: 14px; padding: 18px; background: white; border: 1px solid var(--slate-200); border-radius: 12px; box-shadow: var(--shadow-sm); }
+.document-controls > label { display: grid; gap: 5px; color: var(--slate-600); font-size: 12px; font-weight: 600; }
+.document-controls select, .document-controls input { min-width: 178px; height: 44px; padding: 0 12px; color: var(--slate-950); background: white; border: 1px solid var(--slate-300); border-radius: 8px; }
+.document-count { min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--navy-800); background: var(--blue-50); border: 1px solid #d4e5f9; border-radius: 8px; }
+.document-count > svg { width: 20px; }
+.document-count > div { display: flex; align-items: baseline; gap: 6px; }
+.document-count strong { font-size: 18px; }
+.document-count span { color: var(--slate-600); font-size: 12px; white-space: nowrap; }
+.document-controls__actions { margin-left: auto; display: flex; gap: 10px; }
+.structure-control { min-width: 0; display: grid; gap: 5px; }
+.structure-control > label { color: var(--slate-600); font-size: 12px; font-weight: 700; }
+.structure-control > div { display: grid; grid-template-columns: minmax(190px, 250px) 44px; gap: 7px; }
+.structure-control select { width: 100%; min-width: 0; }
+.icon-button--add { color: var(--blue-700); background: var(--blue-50); border-color: #c9def8; }
+.structure-arrow { width: 17px; margin-bottom: 13px; color: var(--slate-400); }
+.structure-empty { min-height: 430px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 18px; padding: 40px 20px; background: white; border: 1px solid var(--slate-200); border-radius: 12px; text-align: center; box-shadow: var(--shadow-sm); }
+.structure-empty > svg { width: 52px; height: 52px; padding: 12px; color: var(--blue-700); background: var(--blue-50); border-radius: 14px; }
+.structure-empty h2 { margin: 16px 0 5px; font-size: 20px; }
+.structure-empty p { max-width: 460px; margin: 0 0 20px; color: var(--slate-500); }
+.form-context { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 13px; padding: 10px 12px; color: var(--slate-600); background: var(--blue-50); border: 1px solid #d4e5f9; border-radius: 8px; font-size: 12px; }
+.form-context > * { padding-right: 8px; border-right: 1px solid #c7d8eb; }
+.form-context > *:last-child { border-right: 0; }
+.print-workbench { min-width: 0; display: grid; grid-template-columns: minmax(270px, 340px) minmax(0, 1fr); gap: 18px; margin-top: 18px; }
+.package-summary, .document-stage { min-width: 0; overflow: hidden; background: white; border: 1px solid var(--slate-200); border-radius: 12px; box-shadow: var(--shadow-sm); }
+.package-summary { max-height: calc(100dvh - 184px); display: flex; flex-direction: column; }
+.package-summary > header { padding: 20px 18px 13px; }
+.package-summary h2 { margin: 3px 0 0; font-size: 16px; }
+.package-summary header p { margin: 4px 0 0; color: var(--slate-500); font-size: 11px; }
+.section-kicker { color: var(--orange-600); font-size: 10px; font-weight: 700; letter-spacing: .12em; }
+.package-search { position: relative; margin: 0 14px 12px; }
+.package-search svg { position: absolute; top: 50%; left: 12px; width: 17px; color: var(--slate-500); transform: translateY(-50%); }
+.package-search input { width: 100%; height: 42px; padding: 0 12px 0 38px; border: 1px solid var(--slate-300); border-radius: 8px; font-size: 13px; }
+.package-summary__list { overflow-y: auto; padding: 0 8px 10px; }
+.package-summary__item { width: 100%; min-height: 65px; display: grid; grid-template-columns: 34px minmax(0, 1fr) 20px; align-items: center; gap: 10px; padding: 8px 10px; color: var(--slate-700); background: transparent; border: 1px solid transparent; border-radius: 8px; text-align: left; transition: background var(--transition), border-color var(--transition); }
+.package-summary__item:hover { background: var(--slate-50); }
+.package-summary__item--selected { color: var(--navy-800); background: var(--blue-50); border-color: #c9def8; }
+.package-summary__number { width: 30px; height: 30px; display: grid; place-items: center; color: var(--slate-500); background: var(--slate-100); border-radius: 6px; font-family: ui-monospace, monospace; font-size: 10px; }
+.package-summary__item > span:nth-child(2) { min-width: 0; display: grid; }
+.package-summary__item strong { font-family: ui-monospace, monospace; font-size: 12px; }
+.package-summary__item small { overflow: hidden; color: var(--slate-500); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.package-summary__item > svg { width: 16px; color: var(--slate-400, #98a2b3); }
+.document-stage { min-height: 650px; }
+.document-stage__toolbar { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--slate-200); }
+.document-tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--slate-100); border-radius: 9px; }
+.document-tabs button { min-height: 38px; display: inline-flex; align-items: center; gap: 7px; padding: 0 13px; color: var(--slate-600); background: transparent; border: 0; border-radius: 7px; font-size: 13px; font-weight: 600; }
+.document-tabs button svg { width: 17px; }
+.document-tabs button.active { color: var(--navy-800); background: white; box-shadow: var(--shadow-sm); }
+.document-stage__canvas { min-height: 580px; overflow: auto; display: grid; place-items: start center; padding: clamp(18px, 4vw, 42px); background: #dfe5ec; }
+.document-stage__canvas--voucher { place-items: center; }
+.print-empty { min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; color: var(--slate-500); text-align: center; }
+.print-empty strong { color: var(--slate-700); }
+.print-only { display: none; }
+
+/* Formato exacto aproximado de la hoja Bauncher: A1:D7, Calibri 15 y bordes finos. */
+.excel-voucher { width: min(100%, 720px); color: #000; background: #fff; border: 1px solid #000; font-family: Calibri, Arial, sans-serif; font-size: 16px; line-height: 1.15; box-shadow: 0 5px 20px rgb(16 24 40 / 12%); }
+.excel-voucher__row { min-height: 42px; display: grid; grid-template-columns: 22% 78%; border-bottom: 1px solid #000; }
+.excel-voucher__row > * { min-width: 0; display: flex; align-items: center; padding: 7px 10px; overflow-wrap: anywhere; }
+.excel-voucher__row > :first-child { border-right: 1px solid #000; font-weight: 400; }
+.excel-voucher__row strong { justify-content: center; text-align: center; font-weight: 400; }
+.excel-voucher__heading { grid-template-columns: 22% 38% 30% 10%; font-size: 17px; }
+.excel-voucher__heading > * { border-right: 1px solid #000; }
+.excel-voucher__heading > *:last-child { border-right: 0; }
+.excel-voucher__heading > strong { font-weight: 700; }
+.excel-voucher__heading > strong:nth-child(3) { justify-content: flex-end; }
+.excel-voucher__heading > strong:last-child { justify-content: flex-start; }
+.excel-voucher__content { min-height: 70px; border-bottom: 0; }
+.excel-voucher footer { display: flex; justify-content: space-between; gap: 16px; padding: 11px 4px 0; font-size: 11px; transform: translateY(28px); }
+
+/* Formato de la hoja Manifiesto: encargado, No/DATE/BAG y ocho columnas sin decoración. */
+.excel-manifest { width: 100%; min-width: 850px; color: #000; background: #fff; padding: 24px 22px 30px; font-family: 'Arial Narrow', Arial, sans-serif; box-shadow: 0 5px 20px rgb(16 24 40 / 12%); }
+.excel-manifest__attendant { min-height: 55px; display: flex; align-items: center; justify-content: center; font-family: Calibri, Arial, sans-serif; font-size: 25px; font-weight: 700; text-transform: uppercase; }
+.excel-manifest__meta { display: grid; grid-template-columns: 5.63fr 36.36fr 58.01fr; align-items: end; min-height: 54px; font-family: Calibri, Arial, sans-serif; font-size: 22px; }
+.excel-manifest__meta strong:nth-child(2) { padding-left: 12px; }
+.excel-manifest__meta strong:last-child { padding-left: 70%; white-space: nowrap; }
+.excel-manifest__rows { display: grid; }
+.excel-manifest__row { min-height: 43px; display: grid; grid-template-columns: 32.71fr 72.14fr 69.14fr 70.86fr 129.43fr 116.86fr 46.43fr 44.29fr; align-items: start; }
+.excel-manifest__row > span { min-width: 0; padding: 5px 5px 2px 0; overflow-wrap: anywhere; font-size: 10px; line-height: 1.25; }
+.excel-manifest__row > span:last-child { padding-left: 5px; }
+
+@media (max-width: 1020px) {
+  .print-center__header { grid-template-columns: auto 1fr; }
+  .print-nav { order: 3; grid-column: 1 / -1; width: 100%; }
+  .print-nav button { flex: 1; justify-content: center; }
+  .print-center__title { order: 3; grid-column: 1 / -1; }
+  .print-center__header > .button { justify-self: end; }
+  .document-controls { flex-wrap: wrap; }
+  .structure-control { flex: 1 1 300px; }
+  .structure-control > div { grid-template-columns: minmax(0, 1fr) 44px; }
+  .structure-arrow { display: none; }
+  .document-controls__actions { width: 100%; margin-left: 0; }
+  .document-controls__actions .button { flex: 1; }
+  .print-workbench { grid-template-columns: 1fr; }
+  .package-summary { max-height: 440px; }
+}
+
+@media (max-width: 620px) {
+  .print-center__header { gap: 14px; padding: 14px 16px; }
+  .print-center__header > .button { padding: 0 12px; }
+  .print-center__title p { display: none; }
+  .print-center__main { padding-top: 16px; }
+  .section-heading { margin-bottom: 14px; }
+  .section-heading p { font-size: 12px; }
+  .structure-control { flex-basis: 100%; }
+  .document-controls > label { flex: 1 1 100%; }
+  .document-controls select, .document-controls input { width: 100%; }
+  .document-count { width: 100%; }
+  .document-controls__actions { flex-direction: column; }
+  .document-stage__toolbar { align-items: stretch; flex-direction: column; }
+  .document-tabs { width: 100%; }
+  .document-tabs button { flex: 1; justify-content: center; }
+  .document-stage__toolbar > .button { width: 100%; }
+  .document-stage { min-height: 0; }
+  .document-stage__canvas { min-height: 0; padding: 16px; }
+  .document-stage__canvas--manifest { display: block; min-height: 340px; overflow: hidden; }
+  .document-stage__canvas--manifest .excel-manifest { min-width: 850px; zoom: .34; }
+  .excel-voucher { font-size: 12px; }
+  .excel-voucher__heading { font-size: 12px; }
+  .excel-voucher__row > * { padding: 6px; }
+  .excel-voucher footer { font-size: 9px; }
+}
+
+@page manifest-page { size: A4 landscape; margin: 5mm; }
+@page voucher-page { size: A4 portrait; margin: 13mm; }
+
+@media print {
+  body.print-manifest-document > .skip-link,
+  body.print-vouchers-document > .skip-link,
+  body.print-single-voucher > .skip-link,
+  body.print-manifest-document .print-center__header,
+  body.print-vouchers-document .print-center__header,
+  body.print-single-voucher .print-center__header,
+  body.print-manifest-document .document-controls,
+  body.print-vouchers-document .document-controls,
+  body.print-single-voucher .document-controls,
+  body.print-manifest-document .print-workbench,
+  body.print-vouchers-document .print-workbench,
+  body.print-single-voucher .print-workbench,
+  body.print-manifest-document .section-heading,
+  body.print-vouchers-document .section-heading,
+  body.print-single-voucher .section-heading,
+  body.print-manifest-document .modal-layer,
+  body.print-vouchers-document .modal-layer,
+  body.print-single-voucher .modal-layer { display: none !important; }
+
+  body.print-manifest-document .print-center,
+  body.print-vouchers-document .print-center,
+  body.print-single-voucher .print-center { min-height: 0; background: #fff; }
+
+  body.print-manifest-document .print-center__main,
+  body.print-vouchers-document .print-center__main,
+  body.print-single-voucher .print-center__main { width: auto; margin: 0; padding: 0; }
+
+  body.print-manifest-document .manifest-print-root,
+  body.print-vouchers-document .vouchers-print-root,
+  body.print-single-voucher .single-voucher-print-root { display: block !important; }
+
+  body.print-manifest-document .excel-manifest { page: manifest-page; width: 100%; min-width: 0; padding: 0; box-shadow: none; }
+  body.print-manifest-document .excel-manifest__attendant { min-height: 15mm; font-size: 18pt; }
+  body.print-manifest-document .excel-manifest__meta { min-height: 14mm; font-size: 16pt; }
+  body.print-manifest-document .excel-manifest__row { min-height: 10.3mm; break-inside: avoid; }
+  body.print-manifest-document .excel-manifest__row > span { font-size: 7.6pt; line-height: 1.15; }
+  body.print-manifest-document .excel-manifest--batch { break-after: page; }
+  body.print-manifest-document .excel-manifest--batch:last-child { break-after: auto; }
+
+  body.print-vouchers-document .excel-voucher,
+  body.print-single-voucher .excel-voucher { page: voucher-page; width: 178mm; margin: 0 auto; border: .3mm solid #000; box-shadow: none; font-size: 15pt; }
+  body.print-vouchers-document .excel-voucher { break-after: page; }
+  body.print-vouchers-document .excel-voucher:last-child { break-after: auto; }
+  body.print-vouchers-document .excel-voucher__row,
+  body.print-single-voucher .excel-voucher__row { min-height: 7mm; border-bottom-width: .3mm; }
+  body.print-vouchers-document .excel-voucher__heading,
+  body.print-single-voucher .excel-voucher__heading { font-size: 15pt; }
+  body.print-vouchers-document .excel-voucher__content,
+  body.print-single-voucher .excel-voucher__content { min-height: 14mm; }
+  body.print-vouchers-document .excel-voucher footer,
+  body.print-single-voucher .excel-voucher footer { font-size: 9pt; transform: translateY(8mm); }
+}

@@ -1,6 +1,8 @@
 import re
 import unicodedata
 
+from deep_translator import GoogleTranslator, MyMemoryTranslator
+
 
 # Equivalencias recuperadas de la macro TRADUCTER del libro original.
 TRANSLATIONS = {
@@ -83,7 +85,7 @@ def normalize_spanish(value: str) -> str:
     return re.sub(r"\s*,\s*", ", ", " ".join(plain.split())).strip(" ,")
 
 
-def translate_contents(value: str) -> str:
+def translate_with_dictionary(value: str) -> str:
     translated = normalize_spanish(value)
     for source in sorted(TRANSLATIONS, key=len, reverse=True):
         translated = re.sub(
@@ -91,3 +93,40 @@ def translate_contents(value: str) -> str:
         )
     return translated.upper()
 
+
+def translate_online(value: str) -> str:
+    providers = (
+        GoogleTranslator(source="es", target="en"),
+        MyMemoryTranslator(source="spanish", target="english"),
+    )
+    last_error = None
+    for provider in providers:
+        try:
+            result = provider.translate(value)
+            if result:
+                return " ".join(str(result).strip().split()).upper()
+        except Exception as error:
+            last_error = error
+    if last_error:
+        raise last_error
+    return normalize_spanish(value)
+
+
+def translate_contents(value: str) -> str:
+    """Translate arbitrary Spanish content, preserving the workbook terminology.
+
+    Known customs terms use the deterministic VBA dictionary. Unknown segments are
+    translated through deep-translator; if the provider is unavailable, the
+    normalized original remains usable instead of blocking voucher registration.
+    """
+    segments = [item.strip() for item in re.split(r"[,;\n]+", value) if item.strip()]
+    normalized_segments = [normalize_spanish(segment) for segment in segments or [value]]
+    if all(segment in TRANSLATIONS for segment in normalized_segments):
+        return ", ".join(TRANSLATIONS[segment] for segment in normalized_segments).upper()
+
+    try:
+        return translate_online(value)
+    except Exception:
+        return ", ".join(
+            TRANSLATIONS.get(segment, segment) for segment in normalized_segments
+        ).upper()

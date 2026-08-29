@@ -17,6 +17,13 @@ async def connect_database() -> AsyncIOMotorDatabase:
     await database.addresses.create_index("number", unique=True)
     await database.addresses.create_index([("address", "text"), ("phone", "text")])
     await database.shipments.create_index("code")
+    await database.manifests.create_index("legacy_date", unique=True, sparse=True)
+    await database.manifests.create_index("manifest_date")
+    await database.bags.create_index(
+        [("manifest_id", 1), ("number", 1)], unique=True
+    )
+    await database.shipments.create_index("bag_id")
+    await database.shipments.create_index("manifest_id")
     await database.shipments.create_index([("bag_number", 1), ("shipment_date", -1)])
     await database.shipments.create_index(
         [
@@ -42,4 +49,3 @@ async def close_database() -> None:
         client.close()
     client = None
     database = None
-

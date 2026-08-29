@@ -1,16 +1,17 @@
-# Maletas · Centro de operaciones
+# Maletas · Manifiestos y bauchers
 
-Aplicación web que reemplaza el flujo del libro Excel `MANIFIESTO MALETAS...xlsm` con una interfaz React, una API FastAPI y persistencia en MongoDB.
+Aplicación web enfocada en generar e imprimir los documentos del libro Excel `MANIFIESTO MALETAS...xlsm`. Usa React en el frontend, FastAPI en la API y MongoDB para persistencia.
 
 ## Qué replica del Excel
 
-- Registro de paquetes por número de maleta.
-- Catálogo numerado de direcciones y teléfonos (hoja `DATABASE`).
-- Tabla operativa de envíos (hoja `GRADLE`).
-- Generación de manifiestos por maleta con tipo `UNSOLICITED` y cantidad `2`.
-- Búsqueda y modificación por código.
-- Etiqueta individual lista para imprimir (hoja `Bauncher`).
-- Traducción de contenidos mediante el diccionario recuperado de las macros VBA.
+- Creación de manifiestos con fecha y encargado.
+- Creación de varias maletas dentro de cada manifiesto.
+- Registro de varios bauchers dentro de cada maleta.
+- Directorio independiente para registrar y editar direcciones.
+- Vista previa e impresión de todas las maletas del manifiesto en A4 horizontal.
+- Vista previa e impresión de un baucher o de todos los bauchers en A4 vertical.
+- Traducción automática completa español→inglés, conservando las equivalencias de la macro.
+- Formatos, columnas y proporciones recuperados de las hojas `Manifiesto` y `Bauncher`.
 
 La primera vez que arranca un MongoDB vacío, la API importa automáticamente las 99 direcciones y los 38 envíos del libro original. En arranques posteriores no duplica registros.
 
@@ -25,7 +26,7 @@ docker compose up --build
 Abre:
 
 - Aplicación: http://localhost:8080
-- Documentación API: http://localhost:8080/api/docs
+- Documentación API: http://localhost:8080/api/v1/docs
 - Estado API: http://localhost:8080/api/v1/health
 
 Para detener el stack:
@@ -62,6 +63,9 @@ Vite redirige `/api` a la API local en el puerto `8000`.
 
 ## API principal
 
+- `GET/POST /api/v1/manifests`
+- `GET/POST /api/v1/manifests/{id}/bags`
+- `GET /api/v1/bags/{id}/shipments`
 - `GET/POST /api/v1/shipments`
 - `GET/PATCH/DELETE /api/v1/shipments/{id}`
 - `GET /api/v1/shipments/export.csv`

@@ -1,11 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import Layout from './components/Layout'
 import Toast from './components/Toast'
-import AddressesPage from './pages/AddressesPage'
-import DashboardPage from './pages/DashboardPage'
-import ManifestsPage from './pages/ManifestsPage'
-import ShipmentsPage from './pages/ShipmentsPage'
+import PrintCenterPage from './pages/PrintCenterPage'
 
 export default function App() {
   const [toast, setToast] = useState(null)
@@ -16,16 +12,10 @@ export default function App() {
   return (
     <>
       <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<DashboardPage notify={notify} />} />
-          <Route path="envios" element={<ShipmentsPage notify={notify} />} />
-          <Route path="manifiestos" element={<ManifestsPage notify={notify} />} />
-          <Route path="directorio" element={<AddressesPage notify={notify} />} />
-        </Route>
+        <Route index element={<PrintCenterPage notify={notify} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toast toast={toast} onDismiss={() => setToast(null)} />
     </>
   )
 }
-

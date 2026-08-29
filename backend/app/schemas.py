@@ -30,9 +30,48 @@ class AddressResponse(AddressBase):
     id: str
 
 
+class ManifestCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    manifest_date: date = Field(default_factory=date.today)
+    attendant: str = Field(min_length=2, max_length=120, default="DORIAN SANTIZO")
+
+    @field_validator("name", "attendant")
+    @classmethod
+    def normalize_manifest_text(cls, value: str) -> str:
+        return " ".join(value.strip().split())
+
+
+class ManifestResponse(ManifestCreate):
+    id: str
+    bag_count: int = 0
+    voucher_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class BagCreate(BaseModel):
+    number: int = Field(ge=1, le=999)
+    name: str | None = Field(default=None, max_length=120)
+
+    @field_validator("name")
+    @classmethod
+    def normalize_bag_name(cls, value: str | None) -> str | None:
+        return " ".join(value.strip().split()) if value else None
+
+
+class BagResponse(BagCreate):
+    id: str
+    manifest_id: str
+    voucher_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
 class ShipmentBase(BaseModel):
     code: str = Field(min_length=1, max_length=32)
-    bag_number: int = Field(ge=1, le=99)
+    bag_number: int = Field(ge=1, le=999)
+    manifest_id: str | None = None
+    bag_id: str | None = None
     shipper_name: str = Field(min_length=2, max_length=120)
     shipper_address: str = Field(min_length=3, max_length=240)
     consignee_name: str = Field(min_length=2, max_length=120)
@@ -61,7 +100,9 @@ class ShipmentCreate(ShipmentBase):
 
 class ShipmentUpdate(BaseModel):
     code: str | None = Field(default=None, min_length=1, max_length=32)
-    bag_number: int | None = Field(default=None, ge=1, le=99)
+    bag_number: int | None = Field(default=None, ge=1, le=999)
+    manifest_id: str | None = None
+    bag_id: str | None = None
     shipper_name: str | None = Field(default=None, min_length=2, max_length=120)
     shipper_address: str | None = Field(default=None, min_length=3, max_length=240)
     consignee_name: str | None = Field(default=None, min_length=2, max_length=120)

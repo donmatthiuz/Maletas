@@ -7,6 +7,7 @@ from datetime import date
 
 from bson import ObjectId
 from fastapi import Depends, FastAPI, HTTPException, Query, Response, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ASCENDING, DESCENDING
@@ -17,8 +18,12 @@ from app.database import close_database, connect_database, get_database
 from app.schemas import (
     AddressCreate,
     AddressResponse,
+    BagCreate,
+    BagResponse,
     DashboardStats,
     HealthResponse,
+    ManifestCreate,
+    ManifestResponse,
     ShipmentCreate,
     ShipmentList,
     ShipmentResponse,
@@ -28,6 +33,7 @@ from app.schemas import (
     utc_now,
 )
 from app.services.importer import seed_database
+from app.services.hierarchy import ensure_hierarchy
 from app.services.translator import translate_contents
 
 
@@ -55,11 +61,22 @@ async def resolve_address(database: AsyncIOMotorDatabase, number: int) -> dict:
     return address
 
 
+async def resolve_bag(database: AsyncIOMotorDatabase, bag_id: str) -> tuple[dict, dict]:
+    bag = await database.bags.find_one({"_id": object_id(bag_id)})
+    if not bag:
+        raise HTTPException(status_code=422, detail="La maleta seleccionada no existe")
+    manifest = await database.manifests.find_one({"_id": object_id(bag["manifest_id"])})
+    if not manifest:
+        raise HTTPException(status_code=422, detail="El manifiesto de la maleta no existe")
+    return bag, manifest
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     database = await connect_database()
     if settings.seed_from_workbook:
         await seed_database(database, settings.source_workbook)
+    await ensure_hierarchy(database)
     yield
     await close_database()
 
@@ -116,7 +133,13 @@ async def dashboard_stats(database: AsyncIOMotorDatabase = Depends(get_database)
     }
 
 
-def shipment_filter(search: str | None, bag_number: int | None, shipment_status: str | None) -> dict:
+def shipment_filter(
+    search: str | None,
+    bag_number: int | None,
+    shipment_status: str | None,
+    manifest_id: str | None = None,
+    bag_id: str | None = None,
+) -> dict:
     filters: dict = {}
     if search:
         safe = re.escape(search.strip())
@@ -128,6 +151,10 @@ def shipment_filter(search: str | None, bag_number: int | None, shipment_status:
         filters["bag_number"] = bag_number
     if shipment_status:
         filters["status"] = shipment_status
+    if manifest_id:
+        filters["manifest_id"] = manifest_id
+    if bag_id:
+        filters["bag_id"] = bag_id
     return filters
 
 
@@ -184,11 +211,13 @@ async def list_shipments(
     search: str | None = None,
     bag_number: int | None = Query(default=None, ge=1),
     shipment_status: str | None = Query(default=None, alias="status"),
+    manifest_id: str | None = None,
+    bag_id: str | None = None,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=12, ge=1, le=100),
     database: AsyncIOMotorDatabase = Depends(get_database),
 ):
-    query = shipment_filter(search, bag_number, shipment_status)
+    query = shipment_filter(search, bag_number, shipment_status, manifest_id, bag_id)
     total = await database.shipments.count_documents(query)
     cursor = (
         database.shipments.find(query)
@@ -217,8 +246,19 @@ async def create_shipment(
 ):
     address = await resolve_address(database, payload.address_number)
     document = payload.model_dump(exclude={"translate_contents"}, mode="json")
+    if payload.bag_id:
+        bag, manifest = await resolve_bag(database, payload.bag_id)
+        document.update(
+            {
+                "bag_id": str(bag["_id"]),
+                "manifest_id": str(manifest["_id"]),
+                "bag_number": bag["number"],
+                "shipment_date": manifest["manifest_date"],
+                "attendant": manifest["attendant"],
+            }
+        )
     if payload.translate_contents:
-        document["contents"] = translate_contents(payload.contents)
+        document["contents"] = await run_in_threadpool(translate_contents, payload.contents)
     document.update(
         {
             "consignee_address": address["address"],
@@ -263,12 +303,23 @@ async def update_shipment(
         raise HTTPException(status_code=404, detail="Envío no encontrado")
 
     changes = payload.model_dump(exclude_unset=True, exclude={"translate_contents"}, mode="json")
+    if payload.bag_id:
+        bag, manifest = await resolve_bag(database, payload.bag_id)
+        changes.update(
+            {
+                "bag_id": str(bag["_id"]),
+                "manifest_id": str(manifest["_id"]),
+                "bag_number": bag["number"],
+                "shipment_date": manifest["manifest_date"],
+                "attendant": manifest["attendant"],
+            }
+        )
     address_number = changes.get("address_number")
     if address_number is not None:
         address = await resolve_address(database, address_number)
         changes.update({"consignee_address": address["address"], "phone": address["phone"]})
     if payload.translate_contents and "contents" in changes:
-        changes["contents"] = translate_contents(changes["contents"])
+        changes["contents"] = await run_in_threadpool(translate_contents, changes["contents"])
     changes["updated_at"] = utc_now()
     await database.shipments.update_one({"_id": shipment_oid}, {"$set": changes})
     return serialize(await database.shipments.find_one({"_id": shipment_oid}))
@@ -359,19 +410,117 @@ async def update_address(
     return serialize(await database.addresses.find_one({"_id": address_oid}))
 
 
-@app.get(f"{settings.api_prefix}/manifests", response_model=list[ShipmentResponse], tags=["Manifiestos"])
-async def get_manifest(
-    bag_number: int = Query(ge=1),
-    shipment_date: date | None = None,
+@app.get(
+    f"{settings.api_prefix}/manifests",
+    response_model=list[ManifestResponse],
+    tags=["Manifiestos"],
+)
+async def list_manifests(
     database: AsyncIOMotorDatabase = Depends(get_database),
 ):
-    query: dict = {"bag_number": bag_number}
-    if shipment_date:
-        query["shipment_date"] = shipment_date.isoformat()
-    cursor = database.shipments.find(query).sort("created_at", ASCENDING)
+    results = []
+    async for document in database.manifests.find({}).sort(
+        [("manifest_date", DESCENDING), ("created_at", DESCENDING)]
+    ):
+        manifest_id = str(document["_id"])
+        item = serialize(document)
+        item["bag_count"] = await database.bags.count_documents(
+            {"manifest_id": manifest_id}
+        )
+        item["voucher_count"] = await database.shipments.count_documents(
+            {"manifest_id": manifest_id}
+        )
+        results.append(item)
+    return results
+
+
+@app.post(
+    f"{settings.api_prefix}/manifests",
+    response_model=ManifestResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Manifiestos"],
+)
+async def create_manifest(
+    payload: ManifestCreate,
+    database: AsyncIOMotorDatabase = Depends(get_database),
+):
+    now = utc_now()
+    document = {
+        **payload.model_dump(mode="json"),
+        "created_at": now,
+        "updated_at": now,
+    }
+    result = await database.manifests.insert_one(document)
+    return {**serialize(await database.manifests.find_one({"_id": result.inserted_id})), "bag_count": 0, "voucher_count": 0}
+
+
+@app.get(
+    f"{settings.api_prefix}/manifests/{{manifest_id}}/bags",
+    response_model=list[BagResponse],
+    tags=["Maletas"],
+)
+async def list_bags(
+    manifest_id: str,
+    database: AsyncIOMotorDatabase = Depends(get_database),
+):
+    if not await database.manifests.find_one({"_id": object_id(manifest_id)}):
+        raise HTTPException(status_code=404, detail="Manifiesto no encontrado")
+    results = []
+    async for document in database.bags.find({"manifest_id": manifest_id}).sort("number", ASCENDING):
+        item = serialize(document)
+        item["voucher_count"] = await database.shipments.count_documents(
+            {"bag_id": item["id"]}
+        )
+        results.append(item)
+    return results
+
+
+@app.post(
+    f"{settings.api_prefix}/manifests/{{manifest_id}}/bags",
+    response_model=BagResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Maletas"],
+)
+async def create_bag(
+    manifest_id: str,
+    payload: BagCreate,
+    database: AsyncIOMotorDatabase = Depends(get_database),
+):
+    if not await database.manifests.find_one({"_id": object_id(manifest_id)}):
+        raise HTTPException(status_code=404, detail="Manifiesto no encontrado")
+    now = utc_now()
+    document = {
+        **payload.model_dump(),
+        "name": payload.name or f"Maleta #{payload.number}",
+        "manifest_id": manifest_id,
+        "created_at": now,
+        "updated_at": now,
+    }
+    try:
+        result = await database.bags.insert_one(document)
+    except DuplicateKeyError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=f"El manifiesto ya contiene la maleta #{payload.number}",
+        ) from exc
+    return {**serialize(await database.bags.find_one({"_id": result.inserted_id})), "voucher_count": 0}
+
+
+@app.get(
+    f"{settings.api_prefix}/bags/{{bag_id}}/shipments",
+    response_model=list[ShipmentResponse],
+    tags=["Maletas"],
+)
+async def list_bag_shipments(
+    bag_id: str,
+    database: AsyncIOMotorDatabase = Depends(get_database),
+):
+    await resolve_bag(database, bag_id)
+    cursor = database.shipments.find({"bag_id": bag_id}).sort("created_at", ASCENDING)
     return [serialize(document) async for document in cursor]
 
 
 @app.post(f"{settings.api_prefix}/translate", response_model=TranslateResponse, tags=["Herramientas"])
 async def translate(payload: TranslateRequest):
-    return {"original": payload.text, "translated": translate_contents(payload.text)}
+    translated = await run_in_threadpool(translate_contents, payload.text)
+    return {"original": payload.text, "translated": translated}
