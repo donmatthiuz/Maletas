@@ -45,7 +45,7 @@ Fecha de inicio: 2026-08-28
   - 23.5703125
   - 5.28515625
 - Ancho calculado del rango: aproximadamente 486 px de Excel, equivalente a 128.6 mm a 96 dpi.
-- Alturas de filas 1:7: 17.25, 19.5, 19.5, 19.5, 19.5, 18.75 y 39 pt.
+- Alturas de filas 1:7: 17.25, 19.5, 19.5, 19.5, 19.5, 18.75 y 39 pt. La fila 7 conserva `39 pt` como mínimo y crece cuando `Content` necesita más líneas.
 - Tipografía: Calibri 15 pt.
 - Bordes: línea fina negra en toda la cuadrícula.
 - Celdas combinadas: `B2:D2` hasta `B7:D7`.
@@ -53,6 +53,8 @@ Fecha de inicio: 2026-08-28
 
 ## Reglas funcionales decididas
 
+- El nombre mostrado en el encabezado de cada hoja pertenece a la maleta, no al manifiesto; maletas distintas del mismo manifiesto pueden tener remitentes distintos.
+- El precio del baucher es editable, empieza en `2` y se presenta con `$` en la última columna de la hoja de maleta.
 - `print_order` será un entero persistente dentro de cada maleta.
 - La API devolverá los bauchers ordenados por `print_order` y luego por fecha de creación.
 - El reordenamiento tendrá arrastre y alternativas de mover arriba/abajo para teclado y pantallas táctiles.
@@ -62,6 +64,9 @@ Fecha de inicio: 2026-08-28
 
 ## Implementación terminada
 
+- Al crear una maleta se registra el nombre de quien envía y la acción `Editar maleta` permite cambiarlo; la vista previa y la impresión se actualizan con ese valor.
+- La fila `Content` del baucher aumenta de altura para mostrar textos largos completos.
+- La columna `UNSOLICITED` dispone de más ancho y comienza antes; la última columna imprime el precio con `$`.
 - Cada maleta se pagina en bloques de 15 bauchers. El encabezado, la fecha y el número de maleta se repiten en todas las hojas.
 - La previsualización muestra `Hoja N de M` sin incorporar esa etiqueta al documento impreso.
 - `PUT /api/v1/bags/{bag_id}/shipments/order` persiste el orden completo de una maleta.
@@ -73,6 +78,6 @@ Fecha de inicio: 2026-08-28
 ## Correspondencia de impresión verificada
 
 - Manifiesto: A4 horizontal, márgenes de `0.2362204724in`, ocho columnas con las proporciones del XLSM y 15 filas por página.
-- Baucher: A4 vertical, márgenes verticales `0.75in`, horizontales `13mm`, Calibri 15 pt y alturas exactas de las siete filas. A solicitud posterior, el ancho se amplió de los `128.6mm` originales a `184mm`, conservando las proporciones de las cuatro columnas y aprovechando el área imprimible A4 para mostrar las direcciones completas.
+- Baucher: A4 vertical, márgenes verticales `0.75in`, horizontales `13mm`, Calibri 15 pt y alturas mínimas recuperadas de las siete filas. `Content` puede crecer según su texto. A solicitud posterior, el ancho se amplió de los `128.6mm` originales a `184mm`, conservando las proporciones de las cuatro columnas y aprovechando el área imprimible A4 para mostrar las direcciones completas.
 - El PDF no incluye `Atendido`, la fecha auxiliar ni una marca `Página N`, porque están fuera del rango `A1:D7` o pertenecen a la vista de saltos de Excel.
 - Prueba temporal de 16 bauchers: dos hojas A4 horizontales; después de bajar `MP-01`, `MP-02` apareció como primer renglón de la hoja.

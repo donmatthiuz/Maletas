@@ -28,10 +28,9 @@ export default function ManifestsPage({ notify }) {
       {loading ? <Loading rows={8} /> : items.length === 0 ? <EmptyState title="Esta maleta está vacía" message="Asigna envíos a esta maleta o cambia el filtro de fecha." /> : <article className="manifest-sheet print-manifest">
         <header><div><span className="manifest-logo"><ClipboardList aria-hidden="true" /></span><div><strong>MANIFIESTO DE ENVÍO</strong><small>NOR ORIENTE</small></div></div><div><strong>BAG #{bag}</strong><span>{date || items[0]?.shipment_date}</span></div></header>
         <div className="manifest-meta"><span>ENCARGADO</span><strong>{items[0]?.attendant}</strong><span>TIPO</span><strong>UNSOLICITED</strong></div>
-        <div className="manifest-table-wrap"><table className="manifest-table"><thead><tr><th>No.</th><th>Shipper / Address</th><th>Consignee / Address</th><th>Contents</th><th>Type</th><th>Qty.</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.code}</strong></td><td><strong>{item.shipper_name}</strong><span>{item.shipper_address}</span></td><td><strong>{item.consignee_name}</strong><span>{item.consignee_address}</span></td><td>{item.contents}</td><td>{item.customs_type}</td><td>{item.quantity}</td></tr>)}</tbody></table></div>
+        <div className="manifest-table-wrap"><table className="manifest-table"><thead><tr><th>No.</th><th>Shipper / Address</th><th>Consignee / Address</th><th>Contents</th><th>Type</th><th>Price</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.code}</strong></td><td><strong>{item.shipper_name}</strong><span>{item.shipper_address}</span></td><td><strong>{item.consignee_name}</strong><span>{item.consignee_address}</span></td><td>{item.contents}</td><td>{item.customs_type}</td><td>${item.quantity}</td></tr>)}</tbody></table></div>
         <footer><span>Generado por Maletas · Centro de operaciones</span><strong>{items.length} registros</strong></footer>
       </article>}
     </section>
   </div>
 }
-

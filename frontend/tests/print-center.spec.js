@@ -5,10 +5,34 @@ test('separa las tareas y mantiene las acciones en su contexto', async ({ page }
   await expect(page.getByRole('heading', { name: 'Manifiestos y maletas' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Agregar baucher' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Imprimir todos los bauchers' })).toBeVisible()
+  await page.getByRole('button', { name: 'Editar maleta' }).click()
+  const bagAttendant = page.getByRole('dialog').getByLabel('Nombre de quien envía *')
+  await expect(bagAttendant).not.toHaveValue('')
+  const attendantName = await bagAttendant.inputValue()
+  await page.getByRole('button', { name: 'Cerrar', exact: true }).click()
+  await expect(page.locator('.manifest-preview-stack .excel-manifest__attendant').first()).toHaveText(attendantName)
+
+  await page.getByRole('button', { name: 'Agregar maleta' }).first().click()
+  await expect(page.getByRole('dialog').getByLabel('Nombre de quien envía *')).toBeVisible()
+  await page.getByRole('button', { name: 'Cerrar', exact: true }).click()
+
+  await page.getByRole('button', { name: 'Nuevo manifiesto' }).click()
+  await expect(page.getByRole('dialog').getByLabel('Nombre de quien envía *')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Cerrar', exact: true }).click()
 
   await page.getByRole('button', { name: 'Bauchers', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Orden y edición de bauchers' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Editar maleta' })).toBeVisible()
+  await page.getByRole('button', { name: 'Editar maleta' }).click()
+  await expect(page.getByRole('dialog').getByLabel('Nombre de quien envía *')).not.toHaveValue('')
+  await page.getByRole('button', { name: 'Cerrar', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Agregar baucher' })).toBeVisible()
+  await page.getByRole('button', { name: 'Agregar baucher' }).click()
+  const price = page.getByRole('dialog').getByLabel('Precio (USD) *')
+  await expect(price).toHaveValue('2')
+  await price.fill('7')
+  await expect(price).toHaveValue('7')
+  await page.getByRole('button', { name: 'Cerrar', exact: true }).click()
   await expect(page.getByRole('button', { name: /^Editar / }).first()).toBeVisible()
   await expect(page.getByRole('button', { name: /^Eliminar / }).first()).toBeVisible()
   await expect(page.getByRole('button', { name: /^Arrastrar / }).first()).toBeVisible()
@@ -61,6 +85,10 @@ test('ajusta la hoja de la maleta al ancho disponible sin desplazamiento horizon
   const previewPage = page.locator('.manifest-preview-page').first()
   const manifest = previewPage.locator('.excel-manifest')
   await expect(manifest).toBeVisible()
+  const firstManifestRow = manifest.locator('.excel-manifest__row').first()
+  await expect(firstManifestRow.locator('span').nth(6)).toHaveText('UNSOLICITED')
+  expect(await firstManifestRow.locator('span').nth(6).evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await expect(firstManifestRow.locator('span').nth(7)).toHaveText(/^\$\d+$/)
   await expect.poll(() => previewPage.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   expect(await manifest.evaluate((element) => Number.parseFloat(getComputedStyle(element).zoom))).toBeLessThan(1)
 
@@ -105,7 +133,7 @@ test('no produce desbordamiento horizontal en móvil', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
 })
 
-test('muestra el baucher ancho sin recortar la dirección', async ({ page }) => {
+test('muestra el baucher ancho y aumenta Content para texto largo', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/')
   await page.getByRole('button', { name: 'Bauchers', exact: true }).click()
@@ -119,6 +147,14 @@ test('muestra el baucher ancho sin recortar la dirección', async ({ page }) => 
     const address = voucher.locator('.excel-voucher__row').nth(rowIndex).locator('strong')
     expect(await address.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   }
+
+  const contentRow = voucher.locator('.excel-voucher__content')
+  const originalHeight = await contentRow.evaluate((element) => element.getBoundingClientRect().height)
+  await contentRow.locator('strong').evaluate((element) => {
+    element.textContent = 'CLOTHING, SHOES, TOYS, SCHOOL SUPPLIES, COOKED FOOD AND HOUSEHOLD ITEMS '.repeat(6)
+  })
+  await expect.poll(() => contentRow.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThan(originalHeight + 20)
+  expect(await contentRow.locator('strong').evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(true)
 })
 
 test('genera manifiesto completo y todos los bauchers como PDF', async ({ page }) => {

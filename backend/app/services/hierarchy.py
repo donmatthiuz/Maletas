@@ -1,5 +1,6 @@
 from datetime import date
 
+from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
 
 from app.schemas import utc_now
@@ -26,7 +27,6 @@ async def ensure_hierarchy(database) -> None:
             manifest_document = {
                 "name": f"Manifiesto {shipment_date}",
                 "manifest_date": shipment_date,
-                "attendant": shipment.get("attendant") or "DORIAN SANTIZO",
                 "legacy_date": shipment_date,
                 "created_at": now,
                 "updated_at": now,
@@ -48,6 +48,7 @@ async def ensure_hierarchy(database) -> None:
                 "manifest_id": manifest_id,
                 "number": bag_number,
                 "name": f"Maleta #{bag_number}",
+                "attendant": shipment.get("attendant") or "DORIAN SANTIZO",
                 "created_at": now,
                 "updated_at": now,
             }
@@ -66,6 +67,29 @@ async def ensure_hierarchy(database) -> None:
 
     async for bag in database.bags.find({}):
         bag_id = str(bag["_id"])
+        bag_attendant = bag.get("attendant")
+        if not bag.get("attendant"):
+            first_shipment = await database.shipments.find_one(
+                {"bag_id": bag_id}, sort=[("print_order", 1), ("created_at", 1)]
+            )
+            manifest = await database.manifests.find_one(
+                {"_id": ObjectId(bag["manifest_id"])}
+            )
+            bag_attendant = (
+                (first_shipment or {}).get("attendant")
+                or (manifest or {}).get("attendant")
+                or "DORIAN SANTIZO"
+            )
+            await database.bags.update_one(
+                {"_id": bag["_id"]},
+                {"$set": {"attendant": bag_attendant, "updated_at": utc_now()}},
+            )
+
+        await database.shipments.update_many(
+            {"bag_id": bag_id, "attendant": {"$ne": bag_attendant}},
+            {"$set": {"attendant": bag_attendant, "updated_at": utc_now()}},
+        )
+
         highest = await database.shipments.find_one(
             {"bag_id": bag_id, "print_order": {"$exists": True}},
             sort=[("print_order", -1)],

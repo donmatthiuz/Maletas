@@ -54,6 +54,7 @@ maletas
 ├── manifests
 │   └── _id ← bags.manifest_id y shipments.manifest_id
 ├── bags
+│   ├── attendant (nombre de quien envía la maleta)
 │   └── _id ← shipments.bag_id
 ├── shipments
 └── addresses

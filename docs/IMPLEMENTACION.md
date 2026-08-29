@@ -28,7 +28,6 @@ No es un tracker de entregas. Su función principal es registrar información, g
 
 - `name`: nombre visible del manifiesto.
 - `manifest_date`: fecha común del documento.
-- `attendant`: encargado común.
 - `created_at`, `updated_at`.
 
 ### `bags`
@@ -36,6 +35,7 @@ No es un tracker de entregas. Su función principal es registrar información, g
 - `manifest_id`: manifiesto al que pertenece.
 - `number`: número único dentro del manifiesto.
 - `name`: nombre opcional; por defecto `Maleta #N`.
+- `attendant`: nombre de quien envía la maleta; es propio de cada maleta y puede editarse.
 - `created_at`, `updated_at`.
 
 ### `shipments`
@@ -46,6 +46,7 @@ Cada registro representa un baucher. Conserva los campos del Excel y añade:
 - `bag_id`.
 - `bag_number` desnormalizado para impresión.
 - `print_order`: posición persistente dentro de la maleta.
+- `quantity`: precio entero editable; su valor predeterminado es `2` y se imprime con el prefijo `$`.
 
 ### `addresses`
 
@@ -59,19 +60,22 @@ Los envíos importados previamente desde el XLSM no se eliminan. Al iniciar la A
 
 1. Se agrupan por fecha dentro de un manifiesto importado.
 2. Se crea una entidad de maleta por cada número encontrado.
-3. Cada envío recibe sus referencias `manifest_id` y `bag_id`.
+3. Cada maleta hereda el nombre de quien envía desde los datos importados o, para datos de versiones anteriores, desde el antiguo valor del manifiesto.
+4. Cada envío recibe sus referencias `manifest_id` y `bag_id`.
 
-La migración es idempotente: solo completa registros que todavía no tienen jerarquía.
+La migración es idempotente: completa referencias y remitentes faltantes, y mantiene sincronizado el remitente de cada maleta con sus bauchers.
 
 ## Flujo de interfaz
 
 - Sección `Manifiestos y maletas`:
   1. Crear o seleccionar un manifiesto.
-  2. Agregar una o varias maletas.
-  3. Previsualizar una o varias hojas por maleta.
-  4. Imprimir la maleta seleccionada, el manifiesto completo o todos sus bauchers.
+  2. Agregar una o varias maletas indicando el nombre de quien envía.
+  3. Editar una maleta y cambiar su remitente cuando sea necesario.
+  4. Previsualizar una o varias hojas por maleta.
+  5. Imprimir la maleta seleccionada, el manifiesto completo o todos sus bauchers.
 - Sección `Bauchers`:
   - Agregar, editar y eliminar bauchers.
+  - Editar directamente la maleta seleccionada, incluido el nombre de quien envía.
   - Reordenar por arrastre, teclado o botones subir/bajar.
   - Imprimir un baucher o todos los de la maleta.
 - Sección `Direcciones`:
@@ -121,6 +125,7 @@ camisas, pantalones y juguetes para niños
 - `POST /api/v1/manifests`
 - `GET /api/v1/manifests/{manifest_id}/bags`
 - `POST /api/v1/manifests/{manifest_id}/bags`
+- `PATCH /api/v1/bags/{bag_id}`
 - `GET /api/v1/bags/{bag_id}/shipments`
 - `PUT /api/v1/bags/{bag_id}/shipments/order`
 - `POST /api/v1/translate`
@@ -130,7 +135,7 @@ Los endpoints existentes de direcciones y envíos se mantienen.
 ## Estado de validación
 
 - Build React: aprobado.
-- Pruebas unitarias backend: 5 aprobadas.
+- Pruebas unitarias backend: 12 aprobadas.
 - Traducción general real: verificada.
 - Docker Compose: reconstruido correctamente.
 - Prueba integral API Manifiesto → Maleta → Baucher: aprobada y datos temporales eliminados.
@@ -138,9 +143,13 @@ Los endpoints existentes de direcciones y envíos se mantienen.
 - Revisión visual: aprobada a 1440 px, 375 px y móvil horizontal con movimiento reducido.
 - Desbordamiento horizontal móvil en las tres secciones: no detectado.
 - Impresión jerárquica: una maleta temporal con 16 bauchers generó exactamente 2 hojas.
-- Formulario de maleta: número y nombre opcional disponibles.
-- Formulario de baucher: contexto heredado, destino automático de solo lectura y traducción visible.
+- Formulario de maleta: número, nombre opcional y nombre obligatorio de quien envía disponibles al crear y editar.
+- Formulario de baucher: contexto heredado, destino automático de solo lectura, traducción visible y precio editable con valor inicial `2`.
+- Contenido largo: la celda `Content` del baucher aumenta su altura automáticamente sin recortar el texto.
+- Hoja de maleta: precio con símbolo `$` y columna `UNSOLICITED` ampliada y desplazada hacia la izquierda.
 - PDF de manifiesto: 3 páginas A4 horizontales verificadas.
 - PDF de todos los bauchers: 38 páginas A4 verticales verificadas.
 - Prueba integral de API: direcciones aleatorias distintas, edición conservando destino, reordenamiento persistente y eliminación aprobados.
-- Playwright: 3 pruebas de interfaz e impresión aprobadas.
+- Playwright: 7 pruebas de interfaz e impresión aprobadas.
+- Migración local verificada: las maletas existentes recibieron su remitente y los manifiestos ya no lo exponen como dato propio.
+- Edición de remitente por `PATCH /bags/{bag_id}` verificada, incluida la sincronización con los bauchers relacionados.

@@ -4,9 +4,10 @@ Aplicación web enfocada en generar e imprimir los documentos del libro Excel `M
 
 ## Qué replica del Excel
 
-- Creación de manifiestos con fecha y encargado.
-- Creación de varias maletas dentro de cada manifiesto.
+- Creación de manifiestos con nombre y fecha.
+- Creación y edición de varias maletas dentro de cada manifiesto, cada una con su propio nombre de remitente.
 - Registro de varios bauchers dentro de cada maleta.
+- Precio editable por baucher, con valor inicial `2` y formato `$2` en la hoja de maleta.
 - Edición, eliminación y ordenamiento persistente de bauchers.
 - Directorio independiente para registrar y editar direcciones.
 - Asignación aleatoria de destino sin repetir direcciones dentro del manifiesto.
@@ -139,6 +140,7 @@ Los builds equivalentes son `npm run build:testing` y `npm run build:render`.
 
 - `GET/POST /api/v1/manifests`
 - `GET/POST /api/v1/manifests/{id}/bags`
+- `PATCH /api/v1/bags/{id}`
 - `GET /api/v1/bags/{id}/shipments`
 - `PUT /api/v1/bags/{id}/shipments/order`
 - `GET/POST /api/v1/shipments`

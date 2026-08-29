@@ -33,9 +33,8 @@ class AddressResponse(AddressBase):
 class ManifestCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     manifest_date: date = Field(default_factory=date.today)
-    attendant: str = Field(min_length=2, max_length=120, default="DORIAN SANTIZO")
 
-    @field_validator("name", "attendant")
+    @field_validator("name")
     @classmethod
     def normalize_manifest_text(cls, value: str) -> str:
         return " ".join(value.strip().split())
@@ -52,11 +51,42 @@ class ManifestResponse(ManifestCreate):
 class BagCreate(BaseModel):
     number: int = Field(ge=1, le=999)
     name: str | None = Field(default=None, max_length=120)
+    attendant: str = Field(min_length=2, max_length=120)
 
-    @field_validator("name")
+    @field_validator("name", mode="before")
     @classmethod
     def normalize_bag_name(cls, value: str | None) -> str | None:
         return " ".join(value.strip().split()) if value else None
+
+    @field_validator("attendant", mode="before")
+    @classmethod
+    def normalize_bag_attendant(cls, value: str) -> str:
+        return " ".join(value.strip().split()) if isinstance(value, str) else value
+
+
+class BagUpdate(BaseModel):
+    number: int | None = Field(default=None, ge=1, le=999)
+    name: str | None = Field(default=None, max_length=120)
+    attendant: str | None = Field(default=None, min_length=2, max_length=120)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def normalize_bag_name(cls, value: str | None) -> str | None:
+        return " ".join(value.strip().split()) if value else value
+
+    @field_validator("attendant", mode="before")
+    @classmethod
+    def normalize_bag_attendant(cls, value: str | None) -> str | None:
+        if value is None:
+            raise ValueError("El nombre de quien envía no puede quedar vacío")
+        return " ".join(value.strip().split()) if isinstance(value, str) else value
+
+    @field_validator("number", mode="before")
+    @classmethod
+    def prevent_empty_bag_number(cls, value: int | None) -> int:
+        if value is None:
+            raise ValueError("El número de maleta no puede quedar vacío")
+        return value
 
 
 class BagResponse(BagCreate):
@@ -77,6 +107,7 @@ class ShipmentBase(BaseModel):
     consignee_name: str = Field(min_length=2, max_length=120)
     address_number: int | None = Field(default=None, ge=1)
     contents: str = Field(min_length=2, max_length=500)
+    quantity: int = Field(default=2, ge=1, le=9999)
     attendant: str = Field(min_length=2, max_length=120)
     shipment_date: date = Field(default_factory=date.today)
     status: ShipmentStatus = "registrado"
@@ -108,10 +139,18 @@ class ShipmentUpdate(BaseModel):
     consignee_name: str | None = Field(default=None, min_length=2, max_length=120)
     address_number: int | None = Field(default=None, ge=1)
     contents: str | None = Field(default=None, min_length=2, max_length=500)
+    quantity: int | None = Field(default=None, ge=1, le=9999)
     attendant: str | None = Field(default=None, min_length=2, max_length=120)
     shipment_date: date | None = None
     status: ShipmentStatus | None = None
     translate_contents: bool = False
+
+    @field_validator("quantity", mode="before")
+    @classmethod
+    def prevent_empty_price(cls, value: int | None) -> int:
+        if value is None:
+            raise ValueError("El precio no puede quedar vacío")
+        return value
 
     @field_validator("code")
     @classmethod
@@ -131,7 +170,6 @@ class ShipmentResponse(ShipmentBase):
     consignee_address: str
     phone: str
     customs_type: str = "UNSOLICITED"
-    quantity: int = 2
     print_order: int = 0
     created_at: datetime
     updated_at: datetime

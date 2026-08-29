@@ -4,7 +4,7 @@ import { api } from '../api'
 
 const emptyForm = {
   code: '', bag_number: 1, manifest_id: '', bag_id: '', shipper_name: '', shipper_address: '', consignee_name: '',
-  address_number: '', contents: '', attendant: 'DORIAN SANTIZO',
+  address_number: '', contents: '', quantity: 2, attendant: 'DORIAN SANTIZO',
   shipment_date: new Date().toISOString().slice(0, 10), status: 'registrado',
 }
 
@@ -36,6 +36,7 @@ export default function ShipmentForm({
       consignee_name: shipment.consignee_name,
       address_number: shipment.address_number,
       contents: shipment.contents,
+      quantity: shipment.quantity ?? 2,
       attendant: shipment.attendant,
       shipment_date: shipment.shipment_date,
       status: shipment.status,
@@ -79,6 +80,7 @@ export default function ShipmentForm({
     const payload = {
       ...editableForm,
       bag_number: Number(form.bag_number),
+      quantity: Number(form.quantity),
       translate_contents: !translated,
     }
     try {
@@ -123,6 +125,7 @@ export default function ShipmentForm({
           <div className="input-action"><textarea name="contents" value={form.contents} onChange={update} rows="3" required /><button type="button" className="button button--soft" onClick={translate} disabled={translating}>{translating ? <LoaderCircle className="spin" /> : <Languages />} Traducir</button></div>
           <small>Se traduce al inglés automáticamente; las equivalencias del Excel tienen prioridad.</small>
         </label>
+        <label><span>Precio (USD) *</span><div className="currency-input"><span aria-hidden="true">$</span><input name="quantity" type="number" min="1" max="9999" step="1" inputMode="numeric" value={form.quantity} onChange={update} required /></div></label>
         {!printMode && <label><span>Encargado/a *</span><input name="attendant" value={form.attendant} onChange={update} required /></label>}
         {!printMode && <label><span>Estado</span><select name="status" value={form.status} onChange={update}><option value="registrado">Registrado</option><option value="en_transito">En tránsito</option><option value="entregado">Entregado</option></select></label>}
       </div>

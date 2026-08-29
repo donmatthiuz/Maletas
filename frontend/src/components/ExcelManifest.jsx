@@ -43,7 +43,7 @@ export default function ExcelManifest({
             <span>{shipment.consignee_address}</span>
             <span>{shipment.contents}</span>
             <span>{shipment.customs_type}</span>
-            <span>{shipment.quantity}</span>
+            <span>${shipment.quantity}</span>
           </div>
         ))}
         {Array.from({ length: Math.max(0, MANIFEST_ROWS_PER_PAGE - shipments.length) }, (_, index) => (

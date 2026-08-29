@@ -20,6 +20,7 @@ from app.schemas import (
     AddressResponse,
     BagCreate,
     BagResponse,
+    BagUpdate,
     DashboardStats,
     HealthResponse,
     ManifestCreate,
@@ -282,7 +283,7 @@ async def create_shipment(
                 "manifest_id": str(manifest["_id"]),
                 "bag_number": bag["number"],
                 "shipment_date": manifest["manifest_date"],
-                "attendant": manifest["attendant"],
+                "attendant": bag["attendant"],
             }
         )
     if manifest:
@@ -305,7 +306,6 @@ async def create_shipment(
             "address_number": address["number"],
             "phone": address["phone"],
             "customs_type": "UNSOLICITED",
-            "quantity": 2,
             "created_at": utc_now(),
             "updated_at": utc_now(),
         }
@@ -357,7 +357,7 @@ async def update_shipment(
                 "manifest_id": str(manifest["_id"]),
                 "bag_number": bag["number"],
                 "shipment_date": manifest["manifest_date"],
-                "attendant": manifest["attendant"],
+                "attendant": bag["attendant"],
             }
         )
         if moving_manifest:
@@ -555,6 +555,54 @@ async def create_bag(
             detail=f"El manifiesto ya contiene la maleta #{payload.number}",
         ) from exc
     return {**serialize(await database.bags.find_one({"_id": result.inserted_id})), "voucher_count": 0}
+
+
+@app.patch(
+    f"{settings.api_prefix}/bags/{{bag_id}}",
+    response_model=BagResponse,
+    tags=["Maletas"],
+)
+async def update_bag(
+    bag_id: str,
+    payload: BagUpdate,
+    database: AsyncIOMotorDatabase = Depends(get_database),
+):
+    bag_oid = object_id(bag_id)
+    current = await database.bags.find_one({"_id": bag_oid})
+    if not current:
+        raise HTTPException(status_code=404, detail="Maleta no encontrada")
+
+    changes = payload.model_dump(exclude_unset=True)
+    next_number = changes.get("number", current["number"])
+    if "name" in changes and not changes["name"]:
+        changes["name"] = f"Maleta #{next_number}"
+    if not changes:
+        raise HTTPException(status_code=422, detail="No se enviaron cambios para la maleta")
+    changes["updated_at"] = utc_now()
+
+    try:
+        await database.bags.update_one({"_id": bag_oid}, {"$set": changes})
+    except DuplicateKeyError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=f"El manifiesto ya contiene la maleta #{next_number}",
+        ) from exc
+
+    shipment_changes = {"updated_at": utc_now()}
+    if "number" in changes:
+        shipment_changes["bag_number"] = changes["number"]
+    if "attendant" in changes:
+        shipment_changes["attendant"] = changes["attendant"]
+    if len(shipment_changes) > 1:
+        await database.shipments.update_many(
+            {"bag_id": bag_id}, {"$set": shipment_changes}
+        )
+
+    updated = serialize(await database.bags.find_one({"_id": bag_oid}))
+    updated["voucher_count"] = await database.shipments.count_documents(
+        {"bag_id": bag_id}
+    )
+    return updated
 
 
 @app.get(

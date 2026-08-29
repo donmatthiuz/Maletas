@@ -30,7 +30,7 @@ const validators = {
     $jsonSchema: {
       bsonType: "object",
       title: "Manifiesto",
-      required: ["name", "manifest_date", "attendant", "created_at", "updated_at"],
+      required: ["name", "manifest_date", "created_at", "updated_at"],
       properties: {
         _id: { bsonType: "objectId" },
         name: { bsonType: "string", minLength: 2, maxLength: 120 },
@@ -38,7 +38,6 @@ const validators = {
           bsonType: "string",
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
         },
-        attendant: { bsonType: "string", minLength: 2, maxLength: 120 },
         legacy_date: {
           bsonType: ["string", "null"],
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
@@ -53,12 +52,13 @@ const validators = {
     $jsonSchema: {
       bsonType: "object",
       title: "Maleta",
-      required: ["manifest_id", "number", "name", "created_at", "updated_at"],
+      required: ["manifest_id", "number", "name", "attendant", "created_at", "updated_at"],
       properties: {
         _id: { bsonType: "objectId" },
         manifest_id: { bsonType: "string", minLength: 24, maxLength: 24 },
         number: { bsonType: "int", minimum: 1, maximum: 999 },
         name: { bsonType: "string", minLength: 1, maxLength: 120 },
+        attendant: { bsonType: "string", minLength: 2, maxLength: 120 },
         created_at: { bsonType: "date" },
         updated_at: { bsonType: "date" },
       },
@@ -111,7 +111,7 @@ const validators = {
           enum: ["registrado", "en_transito", "entregado"],
         },
         customs_type: { bsonType: "string", minLength: 1, maxLength: 80 },
-        quantity: { bsonType: "int", minimum: 1 },
+        quantity: { bsonType: "int", minimum: 1, maximum: 9999 },
         created_at: { bsonType: "date" },
         updated_at: { bsonType: "date" },
       },

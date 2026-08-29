@@ -5,8 +5,8 @@ Fecha: 2026-08-29
 ## Pruebas automatizadas
 
 ```text
-pytest: 5 passed
-Playwright: 3 passed
+pytest: 12 passed
+Playwright: 7 passed
 vite build: aprobado, 1606 módulos transformados
 git diff --check: sin errores de espacios o parches
 ```
@@ -66,16 +66,21 @@ Pruebas con Chromium:
 - Móvil: 375 × 812.
 - Navegación `Manifiestos y maletas`, `Bauchers` y `Direcciones`: visible y operable.
 - Modal `Nuevo manifiesto`: accesible.
-- Modal `Agregar maleta`: 2 campos disponibles.
+- Modal `Agregar maleta`: número, nombre opcional y nombre de quien envía obligatorio.
+- Acción `Editar maleta`: permite cambiar el remitente y la vista previa usa inmediatamente el valor de la maleta.
+- La acción `Editar maleta` también está disponible desde la sección `Bauchers` y abre el mismo formulario.
 - `Agregar baucher` aparece dentro de la sección Bauchers, no como acción global.
 - Acciones de editar, eliminar, arrastrar, subir y bajar: visibles.
 - Modal `Agregar baucher`: contexto de manifiesto/maleta, destino automático y acción `Traducir`.
+- El formulario de baucher muestra precio editable con valor predeterminado `2`.
 - Desbordamiento horizontal: no detectado en 375 × 812 ni 812 × 375 con movimiento reducido.
 
 ## Impresión PDF
 
 - Manifiesto completo: 3 páginas A4 horizontales, una por maleta.
 - Todos los bauchers del manifiesto importado: 38 páginas A4 verticales, una por baucher.
+- La fila `Content` crece con un texto de prueba extenso y conserva todo el contenido visible.
+- La hoja de maleta muestra precios como `$2` y `UNSOLICITED` completo en su columna ampliada.
 - Maleta temporal con 16 bauchers: 2 páginas A4 horizontales.
 - El orden movido con el control `Bajar` apareció inmediatamente como primer renglón de la hoja de la maleta.
 
@@ -83,5 +88,8 @@ Todos los manifiestos, maletas y bauchers creados para las pruebas fueron elimin
 
 ## Ajustes posteriores
 
+- La última columna de la hoja de maleta se trata como precio editable, parte de `2` y se imprime con `$`; la columna `UNSOLICITED` se desplazó hacia la izquierda para evitar recortes.
+- La altura de `Content` conserva el mínimo recuperado del Excel, pero ahora puede crecer para contenidos extensos.
+- El remitente se trasladó del manifiesto a cada maleta. La migración heredó los valores existentes y `PATCH /bags/{bag_id}` sincroniza el cambio con sus bauchers.
 - El baucher se amplió a `184mm` de ancho, manteniendo sus columnas y alturas proporcionales dentro del A4 vertical y usando márgenes laterales de `13mm` para dar más espacio a las direcciones.
 - Después de crear un baucher se verificó una confirmación de solo lectura con el número de dirección, dirección completa y teléfono asignados por la API.
