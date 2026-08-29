@@ -178,6 +178,7 @@ class TranslateResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     database: str
+    environment: Literal["testing", "production"]
 
 
 class ErrorResponse(BaseModel):

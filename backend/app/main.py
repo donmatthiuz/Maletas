@@ -125,7 +125,11 @@ app.add_middleware(
 @app.get(f"{settings.api_prefix}/health", response_model=HealthResponse, tags=["Sistema"])
 async def health(database: AsyncIOMotorDatabase = Depends(get_database)):
     await database.command("ping")
-    return {"status": "ok", "database": "connected"}
+    return {
+        "status": "ok",
+        "database": "connected",
+        "environment": settings.app_env,
+    }
 
 
 @app.get(f"{settings.api_prefix}/stats", response_model=DashboardStats, tags=["Tablero"])

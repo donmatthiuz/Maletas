@@ -16,6 +16,7 @@ services:
     build: ./backend
     restart: unless-stopped
     environment:
+      APP_ENV: testing
       MONGO_URL: mongodb://mongo:27017
       MONGO_DATABASE: maletas
       CORS_ORIGINS: http://localhost:5173,http://localhost:8080
@@ -43,4 +44,3 @@ services:
 
 volumes:
   mongo_data:
-

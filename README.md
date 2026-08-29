@@ -17,9 +17,13 @@ Aplicación web enfocada en generar e imprimir los documentos del libro Excel `M
 
 La primera vez que arranca un MongoDB vacío, la API importa automáticamente las 99 direcciones y los 38 envíos del libro original. En arranques posteriores no duplica registros.
 
-## Arranque con Docker
+## Modos Docker
 
 Requisitos: Docker y Docker Compose.
+
+### Testing/local
+
+Usa el contenedor local `mongo`, importa el XLSM cuando la base está vacía y conserva los datos en el volumen `mongo_data`:
 
 ```bash
 docker compose up --build
@@ -39,6 +43,46 @@ docker compose down
 
 Los datos permanecen en el volumen `mongo_data`. Para arrancar con una base totalmente vacía, elimina expresamente ese volumen con `docker compose down -v`.
 
+El endpoint de salud muestra `"environment": "testing"`.
+
+### Producción con MongoDB Atlas
+
+Requisitos previos:
+
+1. Crear o migrar Atlas con [mongo_produ/setup.js](mongo_produ/setup.js).
+2. Guardar `MONGO_URL` y `MONGO_DATABASE` en `mongo_produ/.env`.
+3. Configurar el dominio permitido mediante `CORS_ORIGINS`.
+
+Arranque:
+
+```bash
+CORS_ORIGINS=https://tu-dominio.com \
+docker compose -f docker-compose.production.yml up --build -d
+```
+
+Este modo:
+
+- No crea un contenedor MongoDB.
+- Usa exclusivamente la conexión Atlas de `mongo_produ/.env`.
+- No vuelve a importar el XLSM (`SEED_FROM_WORKBOOK=false`).
+- Ejecuta Uvicorn con dos workers por defecto.
+- Rechaza el arranque si `APP_ENV=production` apunta a `localhost` o `mongo:27017`.
+
+Para cambiar el puerto o número de workers:
+
+```bash
+APP_PORT=8081 API_WORKERS=4 CORS_ORIGINS=https://tu-dominio.com \
+docker compose -f docker-compose.production.yml up --build -d
+```
+
+Para detener producción:
+
+```bash
+docker compose -f docker-compose.production.yml down
+```
+
+Testing y producción usan nombres de proyecto diferentes. Pueden coexistir si se asignan puertos distintos.
+
 ## Desarrollo local
 
 ### API
@@ -50,7 +94,7 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
-MONGO_URL=mongodb://localhost:27017 SOURCE_WORKBOOK="../MANIFIESTO MALETAS 21 DE AGOSTO DE 2026 (1).xlsm" uvicorn app.main:app --reload
+APP_ENV=testing MONGO_URL=mongodb://localhost:27017 SOURCE_WORKBOOK="../MANIFIESTO MALETAS 21 DE AGOSTO DE 2026 (1).xlsm" uvicorn app.main:app --reload
 ```
 
 ### Frontend
@@ -85,4 +129,6 @@ backend/       FastAPI, importador XLSM y pruebas
 frontend/      React + Vite, interfaz responsive e impresión
 design-system/ Decisiones visuales generadas con UI/UX Pro Max
 docker-compose.yml
+docker-compose.production.yml
+mongo_produ/   Scripts y configuración de MongoDB Atlas
 ```
