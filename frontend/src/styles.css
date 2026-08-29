@@ -358,10 +358,17 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
 }
 
 /* Centro de documentos: navegación por tarea y jerarquía manifiesto > maleta > baucher. */
-.workspace-shell { min-height: 100dvh; display: grid; grid-template-columns: 240px minmax(0, 1fr); background: #f3f6fa; }
-.workspace-sidebar { position: sticky; top: 0; z-index: 30; height: 100dvh; padding: 22px 14px; color: #dce7f7; background: linear-gradient(180deg, var(--navy-950), #091f40 72%, #0d2c58); }
+.workspace-shell { min-height: 100dvh; display: grid; grid-template-columns: 240px minmax(0, 1fr); background: #f3f6fa; transition: grid-template-columns var(--transition); }
+.workspace-shell--sidebar-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
+.workspace-sidebar { position: sticky; top: 0; z-index: 30; width: 240px; height: 100dvh; padding: 22px 14px; color: #dce7f7; background: linear-gradient(180deg, var(--navy-950), #091f40 72%, #0d2c58); transition: transform var(--transition), opacity var(--transition); }
+.workspace-shell--sidebar-collapsed .workspace-sidebar { position: fixed; inset: 0 auto 0 0; visibility: hidden; opacity: 0; pointer-events: none; transform: translateX(-100%); }
 .workspace-sidebar .print-brand { min-height: 64px; margin: 0 8px 30px; color: white; }
 .workspace-sidebar .print-brand small { color: #9db2cf; }
+.workspace-sidebar .print-brand > div { min-width: 0; flex: 1; }
+.workspace-sidebar__toggle { flex: none; color: #dce7f7; border-color: rgb(255 255 255 / 12%); }
+.workspace-sidebar__toggle:hover { color: white; background: rgb(255 255 255 / 8%); border-color: rgb(255 255 255 / 20%); }
+.workspace-sidebar-reveal { width: min(1540px, 100%); margin: 0 auto; padding: 16px clamp(18px, 3vw, 44px) 0; }
+.workspace-sidebar-reveal .button { min-width: 154px; }
 .workspace-nav { display: grid; gap: 7px; }
 .workspace-nav button { min-height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 13px; color: #b9c9df; background: transparent; border: 1px solid transparent; border-radius: 10px; text-align: left; font-weight: 600; transition: color var(--transition), background var(--transition), border-color var(--transition); }
 .workspace-nav button:hover { color: white; background: rgb(255 255 255 / 7%); }
@@ -381,6 +388,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
 .bag-list { align-self: start; overflow: hidden; background: white; border: 1px solid var(--slate-200); border-radius: 12px; box-shadow: var(--shadow-sm); }
 .bag-list header { padding: 20px 18px 13px; border-bottom: 1px solid var(--slate-100); }
 .bag-list h2 { margin: 3px 0 0; font-size: 16px; }
+.bag-list header p { margin: 5px 0 0; color: var(--slate-500); font-size: 11px; line-height: 1.4; }
 .bag-list > button { width: calc(100% - 16px); min-height: 66px; display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: center; gap: 10px; margin: 8px; padding: 8px 10px; color: var(--slate-700); background: transparent; border: 1px solid transparent; border-radius: 9px; text-align: left; }
 .bag-list > button:hover, .bag-list > button.active { color: var(--navy-800); background: var(--blue-50); border-color: #c9def8; }
 .bag-list > button > span:first-child { width: 36px; height: 36px; display: grid; place-items: center; background: var(--slate-100); border-radius: 8px; }
@@ -395,6 +403,26 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
 .package-summary { max-height: calc(100dvh - 220px); }
 .package-summary > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .package-summary > header .button { min-height: 38px; padding: 0 10px; font-size: 11px; }
+
+.manifest-voucher-search { position: relative; z-index: 5; display: grid; grid-template-columns: minmax(280px, 520px) minmax(180px, 1fr); align-items: end; gap: 8px 18px; margin-top: 18px; padding: 16px 18px; background: white; border: 1px solid var(--slate-200); border-radius: 12px; box-shadow: var(--shadow-sm); }
+.manifest-voucher-search__field { position: relative; display: grid; gap: 6px; }
+.manifest-voucher-search__field > svg { position: absolute; left: 12px; bottom: 12px; width: 18px; color: var(--slate-500); pointer-events: none; }
+.manifest-voucher-search__field label { color: var(--slate-700); font-size: 12px; font-weight: 700; }
+.manifest-voucher-search__field input { width: 100%; min-height: 44px; padding: 0 14px 0 40px; color: var(--slate-950); background: white; border: 1px solid var(--slate-300); border-radius: 8px; }
+.manifest-voucher-search > p { margin: 0 0 11px; color: var(--slate-500); font-size: 12px; }
+.manifest-voucher-search__results { grid-column: 1 / -1; color: var(--slate-600); font-size: 12px; }
+.manifest-voucher-search__results > span { display: block; padding: 12px 14px; background: var(--slate-50); border-radius: 8px; }
+.manifest-voucher-search__results ul { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.manifest-voucher-search__results button { width: 100%; min-height: 48px; display: grid; grid-template-columns: minmax(80px, 130px) minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 12px; color: var(--slate-700); background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 8px; text-align: left; transition: background var(--transition), border-color var(--transition); }
+.manifest-voucher-search__results button:hover { color: var(--navy-800); background: var(--blue-50); border-color: #c9def8; }
+.manifest-voucher-search__results strong { font-family: 'Fira Code', ui-monospace, monospace; }
+.manifest-voucher-search__results button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.manifest-voucher-search__results small { color: var(--slate-500); white-space: nowrap; }
+
+.modal--full { width: calc(100vw - 32px); max-height: calc(100dvh - 32px); }
+.manifest-large-modal .modal__body { padding: 18px; background: #cfd7e1; }
+.manifest-large-view { display: grid; gap: 24px; }
+.manifest-large-view .manifest-preview-page { padding: 18px; background: #dfe5ec; box-shadow: 0 12px 32px rgb(7 26 53 / 14%); }
 
 .voucher-sort-list { overflow-y: auto; padding: 0 8px 10px; }
 .voucher-sort-item { min-height: 70px; display: grid; grid-template-columns: 34px 32px minmax(0, 1fr) auto; align-items: center; gap: 5px; margin-bottom: 5px; padding: 6px; color: var(--slate-700); background: white; border: 1px solid transparent; border-radius: 9px; transition: background var(--transition), border-color var(--transition), box-shadow var(--transition); }
@@ -461,6 +489,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
   .workspace-nav button { min-width: 0; min-height: 44px; justify-content: center; padding: 0 7px; font-size: 11px; }
   .workspace-nav button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .workspace-nav svg { width: 17px; }
+  .workspace-sidebar-reveal { padding: 12px 14px 0; }
+  .workspace-sidebar-reveal .button { width: 100%; }
   .screen-content { padding: 20px 14px 42px; }
   .section-heading { align-items: stretch; flex-direction: column; }
   .section-heading > .button { width: 100%; }
@@ -474,6 +504,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
   .voucher-sort-actions { grid-column: 3; grid-template-columns: repeat(4, 34px); }
   .package-summary > header { align-items: stretch; flex-direction: column; }
   .package-summary > header .button { width: 100%; }
+  .manifest-voucher-search { grid-template-columns: 1fr; padding: 14px; }
+  .manifest-voucher-search > p, .manifest-voucher-search__results { grid-column: auto; }
+  .manifest-voucher-search__results button { grid-template-columns: minmax(70px, 100px) minmax(0, 1fr); }
+  .manifest-voucher-search__results small { grid-column: 2; }
+  .modal--full { width: 100%; max-height: 96dvh; border-radius: 18px 18px 0 0; }
+  .manifest-large-modal .modal__body { padding: 10px; }
 }
 
 @page manifest-page { size: A4 landscape; margin: .2362204724in; }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileSpreadsheet, FolderPlus, Luggage, MapPin, MapPinned, PackagePlus, Plus, Printer, TicketCheck, Trash2 } from 'lucide-react'
-import { api } from '../api'
+import { Expand, FileSpreadsheet, FolderPlus, Luggage, MapPin, MapPinned, PackagePlus, PanelLeftClose, PanelLeftOpen, Plus, Printer, Search, TicketCheck, Trash2 } from 'lucide-react'
+import { api, queryString } from '../api'
 import ExcelManifest, { paginateManifest } from '../components/ExcelManifest'
 import ExcelVoucher from '../components/ExcelVoucher'
 import Loading from '../components/Loading'
@@ -13,6 +13,7 @@ const today = new Date().toISOString().slice(0, 10)
 
 export default function PrintCenterPage({ notify }) {
   const [section, setSection] = useState('manifests')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.localStorage.getItem('maletas-sidebar-collapsed') === 'true')
   const [manifests, setManifests] = useState([])
   const [bags, setBags] = useState([])
   const [shipments, setShipments] = useState([])
@@ -35,6 +36,12 @@ export default function PrintCenterPage({ notify }) {
   const [bagForm, setBagForm] = useState({ number: 1, name: '' })
   const [manifestPrintSheets, setManifestPrintSheets] = useState([])
   const [vouchersToPrint, setVouchersToPrint] = useState([])
+  const [manifestLargeOpen, setManifestLargeOpen] = useState(false)
+  const [expandedManifestSheets, setExpandedManifestSheets] = useState([])
+  const [expandedManifestLoading, setExpandedManifestLoading] = useState(false)
+  const [voucherSearch, setVoucherSearch] = useState('')
+  const [voucherSearchResults, setVoucherSearchResults] = useState([])
+  const [voucherSearchLoading, setVoucherSearchLoading] = useState(false)
 
   const selectedManifest = manifests.find((item) => item.id === selectedManifestId)
   const selectedBag = bags.find((item) => item.id === selectedBagId)
@@ -77,6 +84,34 @@ export default function PrintCenterPage({ notify }) {
   useEffect(() => { loadManifests() }, [])
   useEffect(() => { setBags([]); setSelectedBagId(''); loadBags(selectedManifestId) }, [selectedManifestId])
   useEffect(() => { loadShipments(selectedBagId) }, [selectedBagId])
+  useEffect(() => { window.localStorage.setItem('maletas-sidebar-collapsed', String(sidebarCollapsed)) }, [sidebarCollapsed])
+  useEffect(() => {
+    const code = voucherSearch.trim()
+    if (section !== 'vouchers' || !selectedManifestId || !code) {
+      setVoucherSearchResults([])
+      setVoucherSearchLoading(false)
+      return undefined
+    }
+
+    let active = true
+    setVoucherSearchLoading(true)
+    const timeout = window.setTimeout(async () => {
+      try {
+        const result = await api(`/shipments?${queryString({ search: code, manifest_id: selectedManifestId, limit: 100 })}`)
+        if (!active) return
+        const normalized = code.toLocaleLowerCase()
+        setVoucherSearchResults(result.items
+          .filter((item) => item.code.toLocaleLowerCase().includes(normalized))
+          .sort((left, right) => Number(right.code.toLocaleLowerCase() === normalized) - Number(left.code.toLocaleLowerCase() === normalized)))
+      } catch (error) {
+        if (active) { setVoucherSearchResults([]); notify(error.message, 'error') }
+      } finally {
+        if (active) setVoucherSearchLoading(false)
+      }
+    }, 250)
+
+    return () => { active = false; window.clearTimeout(timeout) }
+  }, [voucherSearch, selectedManifestId, section, notify])
 
   const openPrintDialog = (className, pageRule) => {
     document.getElementById('active-print-page')?.remove()
@@ -97,6 +132,32 @@ export default function PrintCenterPage({ notify }) {
       shipments: bag.id === selectedBagId ? shipments : await api(`/bags/${bag.id}/shipments`),
     })))
     return groups.flatMap(({ bag, shipments: bagShipments }) => paginateManifest(bagShipments).map((pageShipments, pageIndex) => ({ bag, shipments: pageShipments, pageIndex })))
+  }
+
+  const openExpandedManifest = async () => {
+    if (!bags.length) return
+    setManifestLargeOpen(true)
+    setExpandedManifestLoading(true)
+    try {
+      setExpandedManifestSheets(await buildManifestSheets(bags))
+    } catch (error) {
+      setManifestLargeOpen(false)
+      notify(error.message, 'error')
+    } finally { setExpandedManifestLoading(false) }
+  }
+
+  const openBagVouchers = (bagId) => {
+    setSelectedBagId(bagId)
+    setPreview('voucher')
+    setSection('vouchers')
+  }
+
+  const openSearchResult = (shipment) => {
+    setSelectedBagId(shipment.bag_id)
+    setSelectedId(shipment.id)
+    setPreview('voucher')
+    setVoucherSearch('')
+    setVoucherSearchResults([])
   }
 
   const printManifest = async (targetBags = bags) => {
@@ -184,9 +245,9 @@ export default function PrintCenterPage({ notify }) {
     </section>
   )
 
-  return <div className="workspace-shell">
+  return <div className={`workspace-shell ${sidebarCollapsed ? 'workspace-shell--sidebar-collapsed' : ''}`}>
     <aside className="workspace-sidebar">
-      <div className="print-brand"><span aria-hidden="true"><Luggage /></span><div><strong>Maletas</strong><small>Nor Oriente</small></div></div>
+      <div className="print-brand"><span aria-hidden="true"><Luggage /></span><div><strong>Maletas</strong><small>Nor Oriente</small></div><button className="icon-button workspace-sidebar__toggle" type="button" onClick={() => setSidebarCollapsed(true)} aria-label="Ocultar menú lateral" aria-expanded="true"><PanelLeftClose /></button></div>
       <nav className="workspace-nav" aria-label="Secciones principales">
         <button className={section === 'manifests' ? 'active' : ''} onClick={() => setSection('manifests')}><FileSpreadsheet /><span>Manifiestos y maletas</span></button>
         <button className={section === 'vouchers' ? 'active' : ''} onClick={() => setSection('vouchers')}><TicketCheck /><span>Bauchers</span></button>
@@ -195,14 +256,15 @@ export default function PrintCenterPage({ notify }) {
     </aside>
 
     <main id="main-content" className="workspace-content">
+      {sidebarCollapsed && <div className="workspace-sidebar-reveal"><button className="button button--secondary" type="button" onClick={() => setSidebarCollapsed(false)} aria-label="Mostrar menú lateral" aria-expanded="false"><PanelLeftOpen /><span>Mostrar menú</span></button></div>}
       {section === 'addresses' ? <AddressesView notify={notify} /> : section === 'manifests' ? (
         <div className="screen-content">
           <div className="section-heading"><div><span className="section-kicker">DOCUMENTOS</span><h1>Manifiestos y maletas</h1><p>Crea manifiestos, agrega sus maletas y revisa todas sus hojas antes de imprimir.</p></div><button className="button button--primary" onClick={() => { setStructureError(''); setManifestOpen(true) }}><FolderPlus /> Nuevo manifiesto</button></div>
           {hierarchyControls}
           {!selectedManifestId ? <EmptyHierarchy type="manifest" onAction={() => setManifestOpen(true)} /> : !selectedBagId ? <EmptyHierarchy type="bag" onAction={openBagForm} /> : <>
-            <section className="manifest-actions"><div><strong>{selectedManifest?.name}</strong><span>{bags.length} maletas · {selectedManifest?.voucher_count || 0} bauchers</span></div><div><button className="button button--secondary" disabled={!shipments.length} onClick={() => printManifest([selectedBag])}><Printer /> Imprimir esta maleta</button><button className="button button--secondary" disabled={!bags.length} onClick={printAllManifestVouchers}><TicketCheck /> Imprimir todos los bauchers</button><button className="button button--primary" disabled={!bags.length} onClick={() => printManifest()}><FileSpreadsheet /> Imprimir manifiesto completo</button></div></section>
+            <section className="manifest-actions"><div><strong>{selectedManifest?.name}</strong><span>{bags.length} maletas · {selectedManifest?.voucher_count || 0} bauchers</span></div><div><button className="button button--secondary" disabled={!bags.length} onClick={openExpandedManifest}><Expand /> Ver manifiesto en grande</button><button className="button button--secondary" disabled={!shipments.length} onClick={() => printManifest([selectedBag])}><Printer /> Imprimir esta maleta</button><button className="button button--secondary" disabled={!bags.length} onClick={printAllManifestVouchers}><TicketCheck /> Imprimir todos los bauchers</button><button className="button button--primary" disabled={!bags.length} onClick={() => printManifest()}><FileSpreadsheet /> Imprimir manifiesto completo</button></div></section>
             <section className="bag-overview">
-              <div className="bag-list"><header><span className="section-kicker">MALETAS</span><h2>Contenido del manifiesto</h2></header>{bags.map((bag) => <button key={bag.id} className={bag.id === selectedBagId ? 'active' : ''} onClick={() => setSelectedBagId(bag.id)}><span><Luggage /></span><span><strong>{bag.name || `Maleta #${bag.number}`}</strong><small>{bag.voucher_count} bauchers · {Math.max(1, Math.ceil(bag.voucher_count / 15))} hojas</small></span></button>)}<button className="bag-list__add" onClick={openBagForm}><Plus /> Agregar maleta</button></div>
+              <div className="bag-list"><header><span className="section-kicker">MALETAS</span><h2>Contenido del manifiesto</h2><p>Doble clic en una maleta para abrir sus bauchers.</p></header>{bags.map((bag) => <button key={bag.id} className={bag.id === selectedBagId ? 'active' : ''} onClick={() => setSelectedBagId(bag.id)} onDoubleClick={() => openBagVouchers(bag.id)} title="Doble clic para abrir los bauchers"><span><Luggage /></span><span><strong>{bag.name || `Maleta #${bag.number}`}</strong><small>{bag.voucher_count} bauchers · {Math.max(1, Math.ceil(bag.voucher_count / 15))} hojas</small></span></button>)}<button className="bag-list__add" onClick={openBagForm}><Plus /> Agregar maleta</button></div>
               <ManifestPreview loading={loading} pages={previewPages} selectedBag={selectedBag} selectedManifest={selectedManifest} keyPrefix={selectedBagId} />
             </section>
           </>}
@@ -211,8 +273,13 @@ export default function PrintCenterPage({ notify }) {
         <div className="screen-content">
           <div className="section-heading"><div><span className="section-kicker">BAUCHERS</span><h1>Orden y edición de bauchers</h1><p>Arrastra para cambiar el orden de impresión. También puedes usar los botones de subir y bajar.</p></div><button className="button button--primary" disabled={!selectedBag} onClick={() => setFormOpen(true)}><PackagePlus /> Agregar baucher</button></div>
           {hierarchyControls}
+          <section className="manifest-voucher-search" aria-label="Buscar baucher por código dentro del manifiesto">
+            <div className="manifest-voucher-search__field"><Search aria-hidden="true" /><label htmlFor="manifest-voucher-search">Buscar baucher en este manifiesto</label><input id="manifest-voucher-search" type="search" value={voucherSearch} disabled={!selectedManifestId} onChange={(event) => setVoucherSearch(event.target.value)} placeholder={selectedManifestId ? 'Escribe el código, por ejemplo 201K' : 'Primero selecciona un manifiesto'} autoComplete="off" /></div>
+            <p>{selectedManifest ? `La búsqueda incluye todas las maletas de ${selectedManifest.name}.` : 'Selecciona un manifiesto para buscar por código.'}</p>
+            {voucherSearch.trim() && <div className="manifest-voucher-search__results" aria-live="polite">{voucherSearchLoading ? <span>Buscando código…</span> : voucherSearchResults.length ? <ul>{voucherSearchResults.map((shipment) => <li key={shipment.id}><button type="button" onClick={() => openSearchResult(shipment)}><strong>{shipment.code}</strong><span>{shipment.shipper_name}</span><small>Maleta #{shipment.bag_number}</small></button></li>)}</ul> : <span>No se encontró ese código en este manifiesto. Revisa que esté escrito correctamente.</span>}</div>}
+          </section>
           {!selectedBag ? <section className="structure-empty"><Luggage /><h2>Selecciona una maleta</h2><p>Elige o crea un manifiesto y una maleta para administrar sus bauchers.</p></section> : <section className="print-workbench">
-            <aside className="package-summary"><header><div><span className="section-kicker">ORDEN DE IMPRESIÓN</span><h2>{selectedBag.name || `Maleta #${selectedBag.number}`}</h2><p>{reordering ? 'Guardando orden…' : `${shipments.length} bauchers`}</p></div><button className="button button--soft" disabled={!shipments.length} onClick={printBagVouchers}><Printer /> Imprimir maleta</button></header>{loading ? <Loading rows={6} /> : shipments.length ? <SortableVoucherList shipments={shipments} selectedId={selectedShipment?.id} onSelect={(shipment) => { setSelectedId(shipment.id); setPreview('voucher') }} onEdit={setEditingShipment} onDelete={setDeletingShipment} onReorder={reorderShipments} /> : <div className="print-empty"><strong>No hay bauchers</strong><span>Agrega el primer baucher de esta maleta.</span><button className="button button--primary" onClick={() => setFormOpen(true)}><Plus /> Agregar baucher</button></div>}</aside>
+            <aside className="package-summary"><header><div><span className="section-kicker">ORDEN DE IMPRESIÓN</span><h2>{selectedBag.name || `Maleta #${selectedBag.number}`}</h2><p>{reordering ? 'Guardando orden…' : `${shipments.length} bauchers`}</p></div><button className="button button--soft" disabled={!shipments.length} onClick={printBagVouchers}><Printer /> Imprimir bauchers maleta</button></header>{loading ? <Loading rows={6} /> : shipments.length ? <SortableVoucherList shipments={shipments} selectedId={selectedShipment?.id} onSelect={(shipment) => { setSelectedId(shipment.id); setPreview('voucher') }} onEdit={setEditingShipment} onDelete={setDeletingShipment} onReorder={reorderShipments} /> : <div className="print-empty"><strong>No hay bauchers</strong><span>Agrega el primer baucher de esta maleta.</span><button className="button button--primary" onClick={() => setFormOpen(true)}><Plus /> Agregar baucher</button></div>}</aside>
             <div className="document-stage"><header className="document-stage__toolbar"><div className="document-tabs" role="tablist" aria-label="Documento a previsualizar"><button role="tab" aria-selected={preview === 'manifest'} className={preview === 'manifest' ? 'active' : ''} onClick={() => setPreview('manifest')}><FileSpreadsheet /> Hoja de maleta</button><button role="tab" aria-selected={preview === 'voucher'} className={preview === 'voucher' ? 'active' : ''} onClick={() => setPreview('voucher')}><TicketCheck /> Baucher</button></div>{preview === 'voucher' && selectedShipment && <button className="button button--secondary" onClick={printSingleVoucher}><Printer /> Imprimir este baucher</button>}</header><div className={`document-stage__canvas document-stage__canvas--${preview}`}>{loading ? <Loading rows={5} /> : preview === 'manifest' ? <ManifestPreview pages={previewPages} selectedBag={selectedBag} selectedManifest={selectedManifest} keyPrefix={`${selectedBagId}-voucher`} /> : selectedShipment ? <ExcelVoucher shipment={selectedShipment} /> : <div className="print-empty"><strong>Agrega o selecciona un baucher</strong></div>}</div></div>
           </section>}
         </div>
@@ -227,6 +294,7 @@ export default function PrintCenterPage({ notify }) {
     <Modal open={Boolean(deletingShipment)} onClose={() => setDeletingShipment(null)} title="Eliminar baucher" description="Esta acción no se puede deshacer."><div className="confirm-delete"><Trash2 /><p>¿Eliminar el baucher <strong>{deletingShipment?.code}</strong> de esta maleta?</p><div><button className="button button--secondary" onClick={() => setDeletingShipment(null)}>Cancelar</button><button className="button button--danger" disabled={deleting} onClick={deleteShipment}>{deleting ? 'Eliminando…' : 'Eliminar baucher'}</button></div></div></Modal>
     <Modal open={manifestOpen} onClose={() => setManifestOpen(false)} title="Nuevo manifiesto" description="Define la fecha y el encargado del documento."><form className="shipment-form" onSubmit={createManifest}>{structureError && <div className="error-summary" role="alert">{structureError}</div>}<div className="form-grid form-grid--2"><label className="form-span"><span>Nombre del manifiesto *</span><input value={manifestForm.name} onChange={(event) => setManifestForm({ ...manifestForm, name: event.target.value })} placeholder="Ej. Envío 15 de septiembre" required autoFocus /></label><label><span>Fecha *</span><input type="date" value={manifestForm.manifest_date} onChange={(event) => setManifestForm({ ...manifestForm, manifest_date: event.target.value })} required /></label><label><span>Encargado/a *</span><input value={manifestForm.attendant} onChange={(event) => setManifestForm({ ...manifestForm, attendant: event.target.value })} required /></label></div><div className="form-actions"><button className="button button--primary" disabled={savingStructure}><FolderPlus /> {savingStructure ? 'Creando…' : 'Crear manifiesto'}</button></div></form></Modal>
     <Modal open={bagOpen} onClose={() => setBagOpen(false)} title="Agregar maleta" description={`Dentro de ${selectedManifest?.name || 'este manifiesto'}.`}><form className="shipment-form" onSubmit={createBag}>{structureError && <div className="error-summary" role="alert">{structureError}</div>}<div className="form-grid form-grid--2"><label><span>Número de maleta *</span><input type="number" min="1" max="999" value={bagForm.number} onChange={(event) => setBagForm({ ...bagForm, number: event.target.value })} required autoFocus /></label><label><span>Nombre opcional</span><input value={bagForm.name} onChange={(event) => setBagForm({ ...bagForm, name: event.target.value })} placeholder={`Maleta #${bagForm.number}`} /></label></div><div className="form-actions"><button className="button button--primary" disabled={savingStructure}><Luggage /> {savingStructure ? 'Guardando…' : 'Agregar maleta'}</button></div></form></Modal>
+    <Modal open={manifestLargeOpen} onClose={() => setManifestLargeOpen(false)} title={selectedManifest?.name || 'Vista del manifiesto'} description="Todas las maletas y hojas del manifiesto seleccionado." size="full" className="manifest-large-modal"><div className="manifest-large-view">{expandedManifestLoading ? <Loading rows={8} /> : expandedManifestSheets.map(({ bag, shipments: pageShipments, pageIndex }) => <div className="manifest-preview-page" key={`expanded-${bag.id}-${pageIndex}`}><div className="manifest-preview-page__label">{bag.name || `Maleta #${bag.number}`} · Hoja {pageIndex + 1} de {Math.max(1, Math.ceil(bag.voucher_count / 15))}</div><ExcelManifest shipments={pageShipments} bagNumber={bag.number} manifestDate={selectedManifest?.manifest_date} attendant={selectedManifest?.attendant} /></div>)}</div></Modal>
   </div>
 }
 
