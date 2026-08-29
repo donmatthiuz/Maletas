@@ -1,0 +1,12 @@
+name: maletas-render
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_MODE: render
+        NGINX_CONFIG: nginx.render.conf
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"

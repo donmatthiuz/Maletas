@@ -21,9 +21,9 @@ La primera vez que arranca un MongoDB vacío, la API importa automáticamente la
 
 Requisitos: Docker y Docker Compose.
 
-### Testing/local
+### Frontend testing/local
 
-Usa el contenedor local `mongo`, importa el XLSM cuando la base está vacía y conserva los datos en el volumen `mongo_data`:
+Usa el frontend en modo `testing`, la API y el contenedor local `mongo`. Importa el XLSM cuando la base está vacía y conserva los datos en el volumen `mongo_data`:
 
 ```bash
 docker compose up --build
@@ -44,6 +44,26 @@ docker compose down
 Los datos permanecen en el volumen `mongo_data`. Para arrancar con una base totalmente vacía, elimina expresamente ese volumen con `docker compose down -v`.
 
 El endpoint de salud muestra `"environment": "testing"`.
+
+### Frontend con la API de Render
+
+Construye solamente el frontend en modo `render`. Las peticiones se envían directamente a `https://maletas-backend.onrender.com/api/v1`, por lo que no levanta una API ni una base de datos local:
+
+```bash
+docker compose -f docker-compose.render.yml up --build -d
+```
+
+Abre http://localhost:8080. Para detenerlo:
+
+```bash
+docker compose -f docker-compose.render.yml down
+```
+
+Los modos testing y Render usan proyectos Docker separados. Si quieres ejecutarlos simultáneamente, cambia el puerto del segundo:
+
+```bash
+APP_PORT=5173 docker compose -f docker-compose.render.yml up --build -d
+```
 
 ### Producción con MongoDB Atlas
 
@@ -99,13 +119,21 @@ APP_ENV=testing MONGO_URL=mongodb://localhost:27017 SOURCE_WORKBOOK="../MANIFIES
 
 ### Frontend
 
+API local mediante el proxy de Vite:
+
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev:testing
 ```
 
-Vite redirige `/api` a la API local en el puerto `8000`.
+Vite redirige `/api` a la API local en el puerto `8000`. Para usar directamente la API desplegada en Render:
+
+```bash
+npm run dev:render
+```
+
+Los builds equivalentes son `npm run build:testing` y `npm run build:render`.
 
 ## API principal
 
@@ -130,5 +158,6 @@ frontend/      React + Vite, interfaz responsive e impresión
 design-system/ Decisiones visuales generadas con UI/UX Pro Max
 docker-compose.yml
 docker-compose.production.yml
+docker-compose.render.yml
 mongo_produ/   Scripts y configuración de MongoDB Atlas
 ```

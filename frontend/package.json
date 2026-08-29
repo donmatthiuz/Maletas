@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "dev:testing": "vite --host 0.0.0.0 --mode testing",
+    "dev:render": "vite --host 0.0.0.0 --mode render",
     "build": "vite build",
+    "build:testing": "vite build --mode testing",
+    "build:render": "vite build --mode render",
     "preview": "vite preview --host 0.0.0.0",
     "test:e2e": "playwright test"
   },

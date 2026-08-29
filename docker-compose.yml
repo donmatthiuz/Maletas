@@ -34,7 +34,11 @@ services:
       retries: 8
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_MODE: testing
+        NGINX_CONFIG: nginx.conf
     restart: unless-stopped
     ports:
       - "8080:80"
