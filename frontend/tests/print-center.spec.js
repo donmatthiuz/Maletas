@@ -20,6 +20,11 @@ test('separa las tareas y mantiene las acciones en su contexto', async ({ page }
   await expect(page.getByRole('dialog').getByLabel('Nombre de quien envía *')).toHaveCount(0)
   await page.getByRole('button', { name: 'Cerrar', exact: true }).click()
 
+  await page.getByRole('button', { name: 'Editar manifiesto' }).click()
+  await expect(page.getByRole('dialog', { name: 'Editar manifiesto' }).getByLabel('Fecha *')).not.toHaveValue('')
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Guardar cambios' })).toBeVisible()
+  await page.getByRole('button', { name: 'Cerrar', exact: true }).click()
+
   await page.getByRole('button', { name: 'Bauchers', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Orden y edición de bauchers' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Editar maleta' })).toBeVisible()

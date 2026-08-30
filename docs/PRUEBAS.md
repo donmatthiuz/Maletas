@@ -5,7 +5,7 @@ Fecha: 2026-08-29
 ## Pruebas automatizadas
 
 ```text
-pytest: 12 passed
+pytest: 14 passed
 Playwright: 7 passed
 vite build: aprobado, 1606 módulos transformados
 git diff --check: sin errores de espacios o parches
@@ -66,6 +66,7 @@ Pruebas con Chromium:
 - Móvil: 375 × 812.
 - Navegación `Manifiestos y maletas`, `Bauchers` y `Direcciones`: visible y operable.
 - Modal `Nuevo manifiesto`: accesible.
+- Modal `Editar manifiesto`: carga el nombre y la fecha actuales y permite guardar ambos campos.
 - Modal `Agregar maleta`: número, nombre opcional y nombre de quien envía obligatorio.
 - Acción `Editar maleta`: permite cambiar el remitente y la vista previa usa inmediatamente el valor de la maleta.
 - La acción `Editar maleta` también está disponible desde la sección `Bauchers` y abre el mismo formulario.

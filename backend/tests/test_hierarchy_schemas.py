@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import BagCreate, BagUpdate, ManifestCreate, ShipmentCreate, ShipmentUpdate
+from app.schemas import BagCreate, BagUpdate, ManifestCreate, ManifestUpdate, ShipmentCreate, ShipmentUpdate
 
 
 def test_manifest_no_longer_owns_attendant():
@@ -9,6 +9,16 @@ def test_manifest_no_longer_owns_attendant():
 
     assert manifest.name == "Envío semanal"
     assert "attendant" not in manifest.model_dump()
+
+
+def test_manifest_update_accepts_date_and_normalizes_name():
+    update = ManifestUpdate(name="  Envío   actualizado  ", manifest_date="2026-09-01")
+
+    assert update.name == "Envío actualizado"
+    assert update.model_dump(mode="json")["manifest_date"] == "2026-09-01"
+
+    with pytest.raises(ValidationError):
+        ManifestUpdate(manifest_date=None)
 
 
 def test_bag_requires_and_normalizes_attendant():

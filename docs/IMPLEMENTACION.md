@@ -69,10 +69,11 @@ La migración es idempotente: completa referencias y remitentes faltantes, y man
 
 - Sección `Manifiestos y maletas`:
   1. Crear o seleccionar un manifiesto.
-  2. Agregar una o varias maletas indicando el nombre de quien envía.
-  3. Editar una maleta y cambiar su remitente cuando sea necesario.
-  4. Previsualizar una o varias hojas por maleta.
-  5. Imprimir la maleta seleccionada, el manifiesto completo o todos sus bauchers.
+  2. Editar el nombre o la fecha del manifiesto; el cambio de fecha se sincroniza con todos sus bauchers.
+  3. Agregar una o varias maletas indicando el nombre de quien envía.
+  4. Editar una maleta y cambiar su remitente cuando sea necesario.
+  5. Previsualizar una o varias hojas por maleta.
+  6. Imprimir la maleta seleccionada, el manifiesto completo o todos sus bauchers.
 - Sección `Bauchers`:
   - Agregar, editar y eliminar bauchers.
   - Editar directamente la maleta seleccionada, incluido el nombre de quien envía.
@@ -123,6 +124,7 @@ camisas, pantalones y juguetes para niños
 
 - `GET /api/v1/manifests`
 - `POST /api/v1/manifests`
+- `PATCH /api/v1/manifests/{manifest_id}`
 - `GET /api/v1/manifests/{manifest_id}/bags`
 - `POST /api/v1/manifests/{manifest_id}/bags`
 - `PATCH /api/v1/bags/{bag_id}`
@@ -135,7 +137,7 @@ Los endpoints existentes de direcciones y envíos se mantienen.
 ## Estado de validación
 
 - Build React: aprobado.
-- Pruebas unitarias backend: 12 aprobadas.
+- Pruebas unitarias backend: 14 aprobadas.
 - Traducción general real: verificada.
 - Docker Compose: reconstruido correctamente.
 - Prueba integral API Manifiesto → Maleta → Baucher: aprobada y datos temporales eliminados.
@@ -144,6 +146,7 @@ Los endpoints existentes de direcciones y envíos se mantienen.
 - Desbordamiento horizontal móvil en las tres secciones: no detectado.
 - Impresión jerárquica: una maleta temporal con 16 bauchers generó exactamente 2 hojas.
 - Formulario de maleta: número, nombre opcional y nombre obligatorio de quien envía disponibles al crear y editar.
+- Formulario de manifiesto: nombre y fecha disponibles al crear y editar; la fecha actualizada se propaga a sus bauchers.
 - Formulario de baucher: contexto heredado, destino automático de solo lectura, traducción visible y precio editable con valor inicial `2`.
 - Contenido largo: la celda `Content` del baucher aumenta su altura automáticamente sin recortar el texto.
 - Hoja de maleta: precio con símbolo `$` y columna `UNSOLICITED` ampliada y desplazada hacia la izquierda.

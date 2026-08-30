@@ -40,6 +40,25 @@ class ManifestCreate(BaseModel):
         return " ".join(value.strip().split())
 
 
+class ManifestUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    manifest_date: date | None = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def normalize_manifest_text(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError("El nombre del manifiesto no puede quedar vacío")
+        return " ".join(value.strip().split())
+
+    @field_validator("manifest_date", mode="before")
+    @classmethod
+    def prevent_empty_manifest_date(cls, value: date | str | None) -> date | str:
+        if value is None or value == "":
+            raise ValueError("La fecha del manifiesto no puede quedar vacía")
+        return value
+
+
 class ManifestResponse(ManifestCreate):
     id: str
     bag_count: int = 0

@@ -25,6 +25,7 @@ from app.schemas import (
     HealthResponse,
     ManifestCreate,
     ManifestResponse,
+    ManifestUpdate,
     ShipmentCreate,
     ShipmentList,
     ShipmentResponse,
@@ -503,6 +504,43 @@ async def create_manifest(
     }
     result = await database.manifests.insert_one(document)
     return {**serialize(await database.manifests.find_one({"_id": result.inserted_id})), "bag_count": 0, "voucher_count": 0}
+
+
+@app.patch(
+    f"{settings.api_prefix}/manifests/{{manifest_id}}",
+    response_model=ManifestResponse,
+    tags=["Manifiestos"],
+)
+async def update_manifest(
+    manifest_id: str,
+    payload: ManifestUpdate,
+    database: AsyncIOMotorDatabase = Depends(get_database),
+):
+    manifest_oid = object_id(manifest_id)
+    current = await database.manifests.find_one({"_id": manifest_oid})
+    if not current:
+        raise HTTPException(status_code=404, detail="Manifiesto no encontrado")
+
+    changes = payload.model_dump(exclude_unset=True, mode="json")
+    if not changes:
+        raise HTTPException(status_code=422, detail="No se enviaron cambios para el manifiesto")
+    changes["updated_at"] = utc_now()
+    await database.manifests.update_one({"_id": manifest_oid}, {"$set": changes})
+
+    if "manifest_date" in changes:
+        await database.shipments.update_many(
+            {"manifest_id": manifest_id},
+            {"$set": {"shipment_date": changes["manifest_date"], "updated_at": utc_now()}},
+        )
+
+    updated = serialize(await database.manifests.find_one({"_id": manifest_oid}))
+    updated["bag_count"] = await database.bags.count_documents(
+        {"manifest_id": manifest_id}
+    )
+    updated["voucher_count"] = await database.shipments.count_documents(
+        {"manifest_id": manifest_id}
+    )
+    return updated
 
 
 @app.get(
