@@ -37,13 +37,88 @@ test('separa las tareas y mantiene las acciones en su contexto', async ({ page }
   await expect(price).toHaveValue('2')
   await price.fill('7')
   await expect(price).toHaveValue('7')
+  await expect(page.getByRole('dialog', { name: 'Agregar baucher' }).getByRole('button', { name: 'Imprimir este baucher' })).toBeVisible()
   await page.getByRole('button', { name: 'Cerrar', exact: true }).click()
-  await expect(page.getByRole('button', { name: /^Editar / }).first()).toBeVisible()
+  const editVoucher = page.locator('.voucher-sort-item').first().getByRole('button', { name: /^Editar / })
+  await expect(editVoucher).toBeVisible()
+  await editVoucher.click()
+  await expect(page.getByRole('dialog', { name: 'Editar baucher' }).getByRole('button', { name: 'Imprimir este baucher' })).toBeVisible()
+  await page.getByRole('button', { name: 'Cerrar', exact: true }).click()
   await expect(page.getByRole('button', { name: /^Eliminar / }).first()).toBeVisible()
   await expect(page.getByRole('button', { name: /^Arrastrar / }).first()).toBeVisible()
 
   await page.getByRole('button', { name: 'Direcciones', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Direcciones de destino' })).toBeVisible()
+})
+
+test('prepara el formulario para agregar otro baucher sin mostrar la dirección asignada', async ({ page }) => {
+  await page.route('**/api/v1/shipments', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 'baucher-prueba', address_number: 99 }),
+    })
+  })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Bauchers', exact: true }).click()
+  await page.getByRole('button', { name: 'Agregar baucher' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Agregar baucher' })
+  await dialog.getByLabel('Código del paquete *').fill('PRUEBA-1')
+  await dialog.getByLabel('Nombre de quien envía *').fill('Persona remitente')
+  await dialog.getByLabel('Nombre de quien recibe *').fill('Persona destinataria')
+  await dialog.getByLabel('Dirección en Guatemala *').fill('Ciudad de Guatemala')
+  await dialog.getByLabel('Contenido *').fill('ROPA')
+  await dialog.getByLabel('Precio (USD) *').fill('7')
+  await dialog.getByRole('button', { name: 'Guardar baucher' }).click()
+
+  await expect(dialog).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Baucher guardado' })).toHaveCount(0)
+  await expect(dialog.getByLabel('Código del paquete *')).toHaveValue('')
+  await expect(dialog.getByLabel('Nombre de quien envía *')).toHaveValue('')
+  await expect(dialog.getByLabel('Nombre de quien recibe *')).toHaveValue('')
+  await expect(dialog.getByLabel('Dirección en Guatemala *')).toHaveValue('Ciudad de Guatemala')
+  await expect(dialog.getByLabel('Contenido *')).toHaveValue('ROPA')
+  await expect(dialog.getByLabel('Precio (USD) *')).toHaveValue('7')
+  await expect(dialog.getByLabel('Código del paquete *')).toBeFocused()
+})
+
+test('guarda e imprime el baucher actual desde el formulario', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.print = () => { window.__printCalls = (window.__printCalls || 0) + 1 }
+  })
+  await page.route('**/api/v1/shipments', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    const payload = route.request().postDataJSON()
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...payload,
+        id: 'baucher-impreso',
+        address_number: 99,
+        consignee_address: 'Dirección de impresión',
+        phone: '5555-5555',
+      }),
+    })
+  })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Bauchers', exact: true }).click()
+  await page.getByRole('button', { name: 'Agregar baucher' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Agregar baucher' })
+  await dialog.getByLabel('Código del paquete *').fill('PRUEBA-IMPRESION')
+  await dialog.getByLabel('Nombre de quien envía *').fill('Persona remitente')
+  await dialog.getByLabel('Nombre de quien recibe *').fill('Persona destinataria')
+  await dialog.getByLabel('Dirección en Guatemala *').fill('Ciudad de Guatemala')
+  await dialog.getByLabel('Contenido *').fill('ROPA')
+  await dialog.getByRole('button', { name: 'Imprimir este baucher' }).click()
+
+  await expect(dialog).toBeHidden()
+  await expect.poll(() => page.evaluate(() => window.__printCalls || 0)).toBe(1)
+  await expect.poll(() => page.locator('body').getAttribute('class')).toContain('print-single-voucher')
+  await expect(page.locator('.single-voucher-print-root')).toContainText('PRUEBA-IMPRESION')
 })
 
 test('colapsa el sidebar a sus iconos, amplía el contenido y abre los bauchers con doble clic', async ({ page }) => {

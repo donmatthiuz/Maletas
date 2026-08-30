@@ -93,4 +93,5 @@ Todos los manifiestos, maletas y bauchers creados para las pruebas fueron elimin
 - La altura de `Content` conserva el mínimo recuperado del Excel, pero ahora puede crecer para contenidos extensos.
 - El remitente se trasladó del manifiesto a cada maleta. La migración heredó los valores existentes y `PATCH /bags/{bag_id}` sincroniza el cambio con sus bauchers.
 - El baucher se amplió a `184mm` de ancho, manteniendo sus columnas y alturas proporcionales dentro del A4 vertical y usando márgenes laterales de `13mm` para dar más espacio a las direcciones.
-- Después de crear un baucher se verificó una confirmación de solo lectura con el número de dirección, dirección completa y teléfono asignados por la API.
+- Después de crear un baucher se verificó que no aparezca un modal con la dirección asignada. El formulario permanece abierto, limpia código, remitente y destinatario, y conserva dirección en Guatemala, contenido y precio para el siguiente registro.
+- Los formularios de agregar y editar muestran `Imprimir este baucher`; la acción guarda primero y la impresión usa el registro recién confirmado por la API.

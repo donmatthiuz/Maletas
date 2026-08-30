@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Expand, FileSpreadsheet, FolderPlus, Luggage, MapPin, MapPinned, PackagePlus, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Printer, Search, TicketCheck, Trash2 } from 'lucide-react'
+import { Expand, FileSpreadsheet, FolderPlus, Luggage, MapPinned, PackagePlus, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Printer, Search, TicketCheck, Trash2 } from 'lucide-react'
 import { api, queryString } from '../api'
 import ExcelManifest, { paginateManifest } from '../components/ExcelManifest'
 import ExcelVoucher from '../components/ExcelVoucher'
@@ -24,7 +24,6 @@ export default function PrintCenterPage({ notify }) {
   const [loading, setLoading] = useState(true)
   const [formOpen, setFormOpen] = useState(false)
   const [editingShipment, setEditingShipment] = useState(null)
-  const [assignedShipment, setAssignedShipment] = useState(null)
   const [deletingShipment, setDeletingShipment] = useState(null)
   const [manifestOpen, setManifestOpen] = useState(false)
   const [editingManifest, setEditingManifest] = useState(null)
@@ -38,6 +37,7 @@ export default function PrintCenterPage({ notify }) {
   const [bagForm, setBagForm] = useState({ number: 1, name: '', attendant: '' })
   const [manifestPrintSheets, setManifestPrintSheets] = useState([])
   const [vouchersToPrint, setVouchersToPrint] = useState([])
+  const [voucherToPrint, setVoucherToPrint] = useState(null)
   const [manifestLargeOpen, setManifestLargeOpen] = useState(false)
   const [expandedManifestSheets, setExpandedManifestSheets] = useState([])
   const [expandedManifestLoading, setExpandedManifestLoading] = useState(false)
@@ -186,18 +186,27 @@ export default function PrintCenterPage({ notify }) {
     setVouchersToPrint(shipments)
     deferPrint('print-vouchers-document', 'size: A4 portrait !important; margin: 0.75in 13mm !important;')
   }
-  const printSingleVoucher = () => selectedShipment && deferPrint('print-single-voucher', 'size: A4 portrait !important; margin: 0.75in 13mm !important;')
+  const printSingleVoucher = () => {
+    if (!selectedShipment) return
+    setVoucherToPrint(selectedShipment)
+    deferPrint('print-single-voucher', 'size: A4 portrait !important; margin: 0.75in 13mm !important;')
+  }
 
   const refreshHierarchy = async (shipmentId = '') => {
     await Promise.all([loadShipments(selectedBagId), loadBags(selectedManifestId), loadManifests(selectedManifestId)])
     if (shipmentId) setSelectedId(shipmentId)
   }
-  const onSaved = async (saved) => {
+  const onSaved = async (saved, options = {}) => {
     const wasEditing = Boolean(editingShipment)
-    setFormOpen(false); setEditingShipment(null)
-    if (!wasEditing) setAssignedShipment(saved)
+    const shouldPrint = Boolean(options.print)
+    if (wasEditing || shouldPrint) { setFormOpen(false); setEditingShipment(null) }
     notify(wasEditing ? 'Baucher actualizado.' : 'Baucher agregado a la maleta.')
     await refreshHierarchy(saved?.id)
+    if (shouldPrint) {
+      setVoucherToPrint(saved)
+      setPreview('voucher')
+      deferPrint('print-single-voucher', 'size: A4 portrait !important; margin: 0.75in 13mm !important;')
+    }
   }
   const reorderShipments = async (nextOrder) => {
     if (reordering) return
@@ -301,11 +310,10 @@ export default function PrintCenterPage({ notify }) {
       )}
       <div className="print-only manifest-print-root">{manifestPrintSheets.map(({ bag, shipments: bagShipments, pageIndex }, index) => <ExcelManifest key={`${bag.id}-${pageIndex}-${index}`} shipments={bagShipments} bagNumber={bag.number} manifestDate={selectedManifest?.manifest_date} attendant={bag.attendant} batch />)}</div>
       <div className="print-only vouchers-print-root">{vouchersToPrint.map((shipment) => <ExcelVoucher shipment={shipment} batch key={shipment.id} />)}</div>
-      <div className="print-only single-voucher-print-root"><ExcelVoucher shipment={selectedShipment} /></div>
+      <div className="print-only single-voucher-print-root"><ExcelVoucher shipment={voucherToPrint || selectedShipment} /></div>
     </main>
 
     <Modal open={formOpen || Boolean(editingShipment)} onClose={() => { setFormOpen(false); setEditingShipment(null) }} title={editingShipment ? 'Editar baucher' : 'Agregar baucher'} description={`${selectedManifest?.name || ''} · ${selectedBag?.name || ''}`} size="large"><ShipmentForm shipment={editingShipment} onSaved={onSaved} notify={notify} printMode manifestId={selectedManifestId} bagId={selectedBagId} bagNumber={selectedBag?.number} manifestDate={selectedManifest?.manifest_date} attendant={selectedBag?.attendant} /></Modal>
-    <Modal open={Boolean(assignedShipment)} onClose={() => setAssignedShipment(null)} title="Baucher guardado" description="La dirección de destino se asignó automáticamente."><div className="assigned-address-card" role="status"><span aria-hidden="true"><MapPin /></span><div><small>Dirección #{assignedShipment?.address_number}</small><strong>{assignedShipment?.consignee_address}</strong><p>{assignedShipment?.phone}</p></div></div><div className="form-actions"><button className="button button--primary" type="button" onClick={() => setAssignedShipment(null)}>Entendido</button></div></Modal>
     <Modal open={Boolean(deletingShipment)} onClose={() => setDeletingShipment(null)} title="Eliminar baucher" description="Esta acción no se puede deshacer."><div className="confirm-delete"><Trash2 /><p>¿Eliminar el baucher <strong>{deletingShipment?.code}</strong> de esta maleta?</p><div><button className="button button--secondary" onClick={() => setDeletingShipment(null)}>Cancelar</button><button className="button button--danger" disabled={deleting} onClick={deleteShipment}>{deleting ? 'Eliminando…' : 'Eliminar baucher'}</button></div></div></Modal>
     <Modal open={manifestOpen} onClose={() => { setManifestOpen(false); setEditingManifest(null) }} title={editingManifest ? 'Editar manifiesto' : 'Nuevo manifiesto'} description={editingManifest ? 'Actualiza el nombre o la fecha común del documento y sus bauchers.' : 'Define el nombre y la fecha del documento.'}><form className="shipment-form" onSubmit={saveManifest}>{structureError && <div className="error-summary" role="alert">{structureError}</div>}<div className="form-grid form-grid--2"><label className="form-span"><span>Nombre del manifiesto *</span><input value={manifestForm.name} onChange={(event) => setManifestForm({ ...manifestForm, name: event.target.value })} placeholder="Ej. Envío 15 de septiembre" required autoFocus /></label><label><span>Fecha *</span><input type="date" value={manifestForm.manifest_date} onChange={(event) => setManifestForm({ ...manifestForm, manifest_date: event.target.value })} required /></label></div><div className="form-actions"><button className="button button--primary" disabled={savingStructure}>{editingManifest ? <Pencil /> : <FolderPlus />} {savingStructure ? 'Guardando…' : editingManifest ? 'Guardar cambios' : 'Crear manifiesto'}</button></div></form></Modal>
     <Modal open={bagOpen} onClose={() => { setBagOpen(false); setEditingBag(null) }} title={editingBag ? 'Editar maleta' : 'Agregar maleta'} description={`${editingBag ? 'Actualiza los datos de la maleta' : 'Nueva maleta'} dentro de ${selectedManifest?.name || 'este manifiesto'}.`}><form className="shipment-form" onSubmit={saveBag}>{structureError && <div className="error-summary" role="alert">{structureError}</div>}<div className="form-grid form-grid--2"><label><span>Número de maleta *</span><input type="number" min="1" max="999" value={bagForm.number} onChange={(event) => setBagForm({ ...bagForm, number: event.target.value })} required autoFocus /></label><label><span>Nombre opcional</span><input value={bagForm.name} onChange={(event) => setBagForm({ ...bagForm, name: event.target.value })} placeholder={`Maleta #${bagForm.number}`} /></label><label className="form-span"><span>Nombre de quien envía *</span><input value={bagForm.attendant} onChange={(event) => setBagForm({ ...bagForm, attendant: event.target.value })} placeholder="Ej. Dorian Santizo" required /></label></div><div className="form-actions"><button className="button button--primary" disabled={savingStructure}><Luggage /> {savingStructure ? 'Guardando…' : editingBag ? 'Guardar cambios' : 'Agregar maleta'}</button></div></form></Modal>

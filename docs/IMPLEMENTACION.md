@@ -99,7 +99,8 @@ Las medidas recuperadas del XLSM y la justificación de los elementos que sí fo
 - El formulario no permite elegir manualmente la dirección de destino.
 - La API selecciona aleatoriamente una dirección todavía no utilizada dentro del mismo manifiesto.
 - La dirección permanece estable al editar el baucher.
-- Inmediatamente después de crear el baucher, una confirmación de solo lectura muestra el número, la dirección y el teléfono asignados.
+- Después de crear el baucher, el formulario permanece abierto para registrar el siguiente. Se limpian código, remitente y destinatario; se conservan la dirección en Guatemala, el contenido y el precio. La dirección de destino continúa asignándose automáticamente, sin mostrar un modal adicional.
+- Tanto al agregar como al editar, el botón `Imprimir este baucher` guarda primero los datos actuales y luego abre la impresión del baucher confirmado por la API.
 - Cuando se agotan las direcciones disponibles, la creación se detiene con un error recuperable.
 
 ## Traducción
