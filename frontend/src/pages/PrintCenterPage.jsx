@@ -17,6 +17,8 @@ export default function PrintCenterPage({ notify }) {
   const [manifests, setManifests] = useState([])
   const [bags, setBags] = useState([])
   const [shipments, setShipments] = useState([])
+  const [bagShipments, setBagShipments] = useState({})
+  const [organizerLoading, setOrganizerLoading] = useState(false)
   const [selectedManifestId, setSelectedManifestId] = useState('')
   const [selectedBagId, setSelectedBagId] = useState('')
   const [selectedId, setSelectedId] = useState('')
@@ -49,6 +51,7 @@ export default function PrintCenterPage({ notify }) {
   const selectedBag = bags.find((item) => item.id === selectedBagId)
   const selectedShipment = shipments.find((item) => item.id === selectedId) || shipments[0]
   const previewPages = useMemo(() => paginateManifest(shipments), [shipments])
+  const bagIdsKey = useMemo(() => bags.map((item) => item.id).join(','), [bags])
 
   const loadManifests = async (preferredId = '') => {
     try {
@@ -79,14 +82,33 @@ export default function PrintCenterPage({ notify }) {
     try {
       const result = await api(`/bags/${bagId}/shipments`)
       setShipments(result)
+      setBagShipments((current) => ({ ...current, [bagId]: result }))
       setSelectedId((current) => result.some((item) => item.id === current) ? current : (result[0]?.id || ''))
     } catch (error) { notify(error.message, 'error') } finally { setLoading(false) }
   }
 
   useEffect(() => { loadManifests() }, [])
-  useEffect(() => { setBags([]); setSelectedBagId(''); loadBags(selectedManifestId) }, [selectedManifestId])
+  useEffect(() => { setBags([]); setBagShipments({}); setSelectedBagId(''); loadBags(selectedManifestId) }, [selectedManifestId])
   useEffect(() => { loadShipments(selectedBagId) }, [selectedBagId])
   useEffect(() => { window.localStorage.setItem('maletas-sidebar-collapsed', String(sidebarCollapsed)) }, [sidebarCollapsed])
+  useEffect(() => {
+    if (section !== 'vouchers' || !selectedManifestId || !bags.length) {
+      setOrganizerLoading(false)
+      return undefined
+    }
+    let active = true
+    setOrganizerLoading(true)
+    Promise.all(bags.map(async (bag) => [bag.id, await api(`/bags/${bag.id}/shipments`)]))
+      .then((entries) => {
+        if (!active) return
+        const next = Object.fromEntries(entries)
+        setBagShipments(next)
+        if (next[selectedBagId]) setShipments(next[selectedBagId])
+      })
+      .catch((error) => { if (active) notify(error.message, 'error') })
+      .finally(() => { if (active) setOrganizerLoading(false) })
+    return () => { active = false }
+  }, [section, selectedManifestId, bagIdsKey])
   useEffect(() => {
     const code = voucherSearch.trim()
     if (section !== 'vouchers' || !selectedManifestId || !code) {
@@ -208,14 +230,49 @@ export default function PrintCenterPage({ notify }) {
       deferPrint('print-single-voucher', 'size: A4 portrait !important; margin: 0.75in 13mm !important;')
     }
   }
-  const reorderShipments = async (nextOrder) => {
-    if (reordering) return
-    const previous = shipments
-    setShipments(nextOrder); setReordering(true)
+  const arrangeShipments = async (nextLists, { sourceBagId, targetBagId, shipmentId }) => {
+    if (reordering) return false
+    const previousLists = bagShipments
+    const previousSelectedBagId = selectedBagId
+    const destinationBag = bags.find((bag) => bag.id === targetBagId)
+    const normalizedLists = sourceBagId === targetBagId ? nextLists : {
+      ...nextLists,
+      [targetBagId]: (nextLists[targetBagId] || []).map((shipment) => shipment.id === shipmentId ? {
+        ...shipment,
+        bag_id: targetBagId,
+        bag_number: destinationBag.number,
+        attendant: destinationBag.attendant,
+      } : shipment),
+    }
+    const affectedBagIds = [...new Set([sourceBagId, targetBagId])]
+    setBagShipments(normalizedLists)
+    setBags((current) => current.map((bag) => affectedBagIds.includes(bag.id) ? { ...bag, voucher_count: normalizedLists[bag.id].length } : bag))
+    if (affectedBagIds.includes(selectedBagId)) setShipments(normalizedLists[selectedBagId])
+    setReordering(true)
     try {
-      const saved = await api(`/bags/${selectedBagId}/shipments/order`, { method: 'PUT', body: JSON.stringify({ shipment_ids: nextOrder.map((item) => item.id) }) })
-      setShipments(saved); notify('Orden de impresión actualizado.')
-    } catch (error) { setShipments(previous); notify(error.message, 'error') } finally { setReordering(false) }
+      const saved = await api(`/manifests/${selectedManifestId}/shipments/order`, {
+        method: 'PUT',
+        body: JSON.stringify({ bags: affectedBagIds.map((bagId) => ({ bag_id: bagId, shipment_ids: normalizedLists[bagId].map((item) => item.id) })) }),
+      })
+      setBagShipments((current) => ({ ...current, ...saved }))
+      const activeBagId = sourceBagId === targetBagId ? selectedBagId : targetBagId
+      if (saved[activeBagId]) setShipments(saved[activeBagId])
+      if (sourceBagId === targetBagId) notify('Orden de impresión actualizado.')
+      else {
+        setSelectedBagId(targetBagId)
+        setSelectedId(shipmentId)
+        const position = normalizedLists[targetBagId].findIndex((item) => item.id === shipmentId) + 1
+        notify(`Baucher movido a ${destinationBag.name || `Maleta #${destinationBag.number}`} en la posición ${position}.`)
+      }
+      return true
+    } catch (error) {
+      setBagShipments(previousLists)
+      setBags((current) => current.map((bag) => ({ ...bag, voucher_count: (previousLists[bag.id] || []).length })))
+      setSelectedBagId(previousSelectedBagId)
+      setShipments(previousLists[previousSelectedBagId] || [])
+      notify(error.message, 'error')
+      return false
+    } finally { setReordering(false) }
   }
   const deleteShipment = async () => {
     if (!deletingShipment) return
@@ -295,15 +352,15 @@ export default function PrintCenterPage({ notify }) {
         </div>
       ) : (
         <div className="screen-content">
-          <div className="section-heading"><div><span className="section-kicker">BAUCHERS</span><h1>Orden y edición de bauchers</h1><p>Arrastra para cambiar el orden de impresión. También puedes usar los botones de subir y bajar.</p></div><div className="section-heading__actions"><button className="button button--secondary" disabled={!selectedBag} onClick={() => openBagForm(selectedBag)}><Pencil /> Editar maleta</button><button className="button button--primary" disabled={!selectedBag} onClick={() => setFormOpen(true)}><PackagePlus /> Agregar baucher</button></div></div>
+          <div className="section-heading"><div><span className="section-kicker">BAUCHERS</span><h1>Orden y edición de bauchers</h1><p>Despliega las maletas y arrastra cada baucher antes o después de cualquier otro. El nuevo orden queda listo para imprimir.</p></div><div className="section-heading__actions"><button className="button button--secondary" disabled={!selectedBag} onClick={() => openBagForm(selectedBag)}><Pencil /> Editar maleta</button><button className="button button--primary" disabled={!selectedBag} onClick={() => setFormOpen(true)}><PackagePlus /> Agregar baucher</button></div></div>
           {hierarchyControls}
           <section className="manifest-voucher-search" aria-label="Buscar baucher por código dentro del manifiesto">
             <div className="manifest-voucher-search__field"><Search aria-hidden="true" /><label htmlFor="manifest-voucher-search">Buscar baucher en este manifiesto</label><input id="manifest-voucher-search" type="search" value={voucherSearch} disabled={!selectedManifestId} onChange={(event) => setVoucherSearch(event.target.value)} placeholder={selectedManifestId ? 'Escribe el código, por ejemplo 201K' : 'Primero selecciona un manifiesto'} autoComplete="off" /></div>
             <p>{selectedManifest ? `La búsqueda incluye todas las maletas de ${selectedManifest.name}.` : 'Selecciona un manifiesto para buscar por código.'}</p>
             {voucherSearch.trim() && <div className="manifest-voucher-search__results" aria-live="polite">{voucherSearchLoading ? <span>Buscando código…</span> : voucherSearchResults.length ? <ul>{voucherSearchResults.map((shipment) => <li key={shipment.id}><button type="button" onClick={() => openSearchResult(shipment)}><strong>{shipment.code}</strong><span>{shipment.shipper_name}</span><small>Maleta #{shipment.bag_number}</small></button></li>)}</ul> : <span>No se encontró ese código en este manifiesto. Revisa que esté escrito correctamente.</span>}</div>}
           </section>
-          {!selectedBag ? <section className="structure-empty"><Luggage /><h2>Selecciona una maleta</h2><p>Elige o crea un manifiesto y una maleta para administrar sus bauchers.</p></section> : <section className="print-workbench">
-            <aside className="package-summary"><header><div><span className="section-kicker">ORDEN DE IMPRESIÓN</span><h2>{selectedBag.name || `Maleta #${selectedBag.number}`}</h2><p>{reordering ? 'Guardando orden…' : `${shipments.length} bauchers`}</p></div><button className="button button--soft" disabled={!shipments.length} onClick={printBagVouchers}><Printer /> Imprimir bauchers maleta</button></header>{loading ? <Loading rows={6} /> : shipments.length ? <SortableVoucherList shipments={shipments} selectedId={selectedShipment?.id} onSelect={(shipment) => { setSelectedId(shipment.id); setPreview('voucher') }} onEdit={setEditingShipment} onDelete={setDeletingShipment} onReorder={reorderShipments} /> : <div className="print-empty"><strong>No hay bauchers</strong><span>Agrega el primer baucher de esta maleta.</span><button className="button button--primary" onClick={() => setFormOpen(true)}><Plus /> Agregar baucher</button></div>}</aside>
+          {!selectedBag ? <section className="structure-empty"><Luggage /><h2>Selecciona una maleta</h2><p>Elige o crea un manifiesto y una maleta para administrar sus bauchers.</p></section> : <section className="print-workbench print-workbench--organizer">
+            <aside className="package-summary package-summary--organizer"><header><div><span className="section-kicker">ORDEN DE IMPRESIÓN</span><h2>Organizar maletas</h2><p aria-live="polite">{reordering ? 'Guardando el nuevo orden…' : `${selectedManifest?.voucher_count || 0} bauchers en ${bags.length} maletas`}</p></div><button className="button button--soft" disabled={!shipments.length || reordering} onClick={printBagVouchers}><Printer /> Imprimir seleccionada</button></header>{organizerLoading ? <Loading rows={8} /> : <SortableVoucherList bags={bags} shipmentsByBag={bagShipments} selectedBagId={selectedBagId} selectedId={selectedShipment?.id} busy={reordering} onSelect={(shipment, bagId) => { setSelectedBagId(bagId); setShipments(bagShipments[bagId] || []); setSelectedId(shipment.id); setPreview('voucher') }} onEdit={(shipment, bagId) => { setSelectedBagId(bagId); setShipments(bagShipments[bagId] || []); setSelectedId(shipment.id); setEditingShipment(shipment) }} onDelete={(shipment, bagId) => { setSelectedBagId(bagId); setShipments(bagShipments[bagId] || []); setSelectedId(shipment.id); setDeletingShipment(shipment) }} onArrange={arrangeShipments} />}</aside>
             <div className="document-stage"><header className="document-stage__toolbar"><div className="document-tabs" role="tablist" aria-label="Documento a previsualizar"><button role="tab" aria-selected={preview === 'manifest'} className={preview === 'manifest' ? 'active' : ''} onClick={() => setPreview('manifest')}><FileSpreadsheet /> Hoja de maleta</button><button role="tab" aria-selected={preview === 'voucher'} className={preview === 'voucher' ? 'active' : ''} onClick={() => setPreview('voucher')}><TicketCheck /> Baucher</button></div>{preview === 'voucher' && selectedShipment && <button className="button button--secondary" onClick={printSingleVoucher}><Printer /> Imprimir este baucher</button>}</header><div className={`document-stage__canvas document-stage__canvas--${preview}`}>{loading ? <Loading rows={5} /> : preview === 'manifest' ? <ManifestPreview pages={previewPages} selectedBag={selectedBag} selectedManifest={selectedManifest} keyPrefix={`${selectedBagId}-voucher`} onOpenExpanded={openExpandedManifest} /> : selectedShipment ? <ExcelVoucher shipment={selectedShipment} /> : <div className="print-empty"><strong>Agrega o selecciona un baucher</strong></div>}</div></div>
           </section>}
         </div>

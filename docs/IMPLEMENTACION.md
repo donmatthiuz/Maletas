@@ -77,7 +77,9 @@ La migración es idempotente: completa referencias y remitentes faltantes, y man
 - Sección `Bauchers`:
   - Agregar, editar y eliminar bauchers.
   - Editar directamente la maleta seleccionada, incluido el nombre de quien envía.
-  - Reordenar por arrastre, teclado o botones subir/bajar.
+  - Desplegar simultáneamente las maletas del manifiesto y revisar sus bauchers.
+  - Reordenar dentro de una maleta o mover a otra por arrastre, teclado o controles visibles.
+  - Elegir la posición exacta de destino: al inicio, al final o entre dos bauchers.
   - Imprimir un baucher o todos los de la maleta.
 - Sección `Direcciones`:
   - Buscar direcciones.
@@ -131,7 +133,10 @@ camisas, pantalones y juguetes para niños
 - `PATCH /api/v1/bags/{bag_id}`
 - `GET /api/v1/bags/{bag_id}/shipments`
 - `PUT /api/v1/bags/{bag_id}/shipments/order`
+- `PUT /api/v1/manifests/{manifest_id}/shipments/order`
 - `POST /api/v1/translate`
+
+El endpoint de orden del manifiesto recibe las listas completas de las maletas afectadas. La API valida que todas pertenezcan al mismo manifiesto y persiste conjuntamente `bag_id`, `bag_number`, `attendant` y `print_order`, sin reasignar la dirección de destino.
 
 Los endpoints existentes de direcciones y envíos se mantienen.
 

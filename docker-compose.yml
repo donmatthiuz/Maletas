@@ -1,11 +1,13 @@
 services:
   mongo:
-    image: mongo:8.0
+    # MongoDB 8.0 no inicia en kernels Linux 6.19+ (SERVER-121912).
+    # La aplicación no usa funciones exclusivas de 8.0, por lo que 7.0 es suficiente.
+    image: mongo:7.0.40
     restart: unless-stopped
     environment:
       MONGO_INITDB_DATABASE: maletas
     volumes:
-      - mongo_data:/data/db
+      - mongo7_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 5s
@@ -47,4 +49,4 @@ services:
         condition: service_healthy
 
 volumes:
-  mongo_data:
+  mongo7_data:

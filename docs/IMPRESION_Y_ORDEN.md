@@ -58,6 +58,8 @@ Fecha de inicio: 2026-08-28
 - `print_order` será un entero persistente dentro de cada maleta.
 - La API devolverá los bauchers ordenados por `print_order` y luego por fecha de creación.
 - El reordenamiento tendrá arrastre y alternativas de mover arriba/abajo para teclado y pantallas táctiles.
+- Las maletas de un manifiesto podrán desplegarse a la vez. Un baucher podrá insertarse antes o después de otro baucher de cualquier maleta desplegada.
+- Al mover entre maletas se conservará el destino asignado y se actualizarán la maleta, su remitente desnormalizado y el orden de impresión.
 - Al crear un baucher, la API elegirá aleatoriamente una dirección cuyo número aún no aparezca en ningún baucher del mismo manifiesto.
 - Al editar un baucher se conservará su dirección actual.
 - Si no quedan direcciones disponibles, la API responderá con un error claro y no creará el baucher.
@@ -70,7 +72,8 @@ Fecha de inicio: 2026-08-28
 - Cada maleta se pagina en bloques de 15 bauchers. El encabezado, la fecha y el número de maleta se repiten en todas las hojas.
 - La previsualización muestra `Hoja N de M` sin incorporar esa etiqueta al documento impreso.
 - `PUT /api/v1/bags/{bag_id}/shipments/order` persiste el orden completo de una maleta.
-- El listado permite arrastrar con mouse/táctil, reordenar con teclado y usar botones visibles de subir/bajar.
+- `PUT /api/v1/manifests/{manifest_id}/shipments/order` persiste en una sola operación el origen y destino de movimientos entre maletas.
+- El listado permite desplegar varias maletas, arrastrar con mouse/táctil, reordenar con teclado y usar botones visibles de subir/bajar o `Mover` con posición exacta.
 - La edición conserva la dirección asignada; la eliminación requiere confirmación.
 - La creación ya no presenta un selector de destino. La API elige con `$sample` entre las direcciones todavía no usadas en el manifiesto.
 - Hay acciones separadas para imprimir una maleta, todo el manifiesto, los bauchers de una maleta, todos los bauchers del manifiesto y un baucher individual.

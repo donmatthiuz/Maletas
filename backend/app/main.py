@@ -23,6 +23,7 @@ from app.schemas import (
     BagUpdate,
     DashboardStats,
     HealthResponse,
+    ManifestShipmentArrange,
     ManifestCreate,
     ManifestResponse,
     ManifestUpdate,
@@ -690,6 +691,83 @@ async def reorder_bag_shipments(
         await database.shipments.bulk_write(operations)
     cursor = database.shipments.find({"bag_id": bag_id}).sort("print_order", ASCENDING)
     return [serialize(document) async for document in cursor]
+
+
+@app.put(
+    f"{settings.api_prefix}/manifests/{{manifest_id}}/shipments/order",
+    response_model=dict[str, list[ShipmentResponse]],
+    tags=["Maletas"],
+)
+async def arrange_manifest_shipments(
+    manifest_id: str,
+    payload: ManifestShipmentArrange,
+    database: AsyncIOMotorDatabase = Depends(get_database),
+):
+    if not await database.manifests.find_one({"_id": object_id(manifest_id)}):
+        raise HTTPException(status_code=404, detail="Manifiesto no encontrado")
+
+    requested_bag_ids = [item.bag_id for item in payload.bags]
+    requested_bag_oids = [object_id(bag_id) for bag_id in requested_bag_ids]
+    bag_documents = [
+        document
+        async for document in database.bags.find(
+            {"_id": {"$in": requested_bag_oids}, "manifest_id": manifest_id}
+        )
+    ]
+    bags_by_id = {str(document["_id"]): document for document in bag_documents}
+    if set(bags_by_id) != set(requested_bag_ids):
+        raise HTTPException(
+            status_code=422,
+            detail="Todas las maletas deben pertenecer al manifiesto seleccionado",
+        )
+
+    current_shipment_ids = {
+        str(document["_id"])
+        async for document in database.shipments.find(
+            {"bag_id": {"$in": requested_bag_ids}}, {"_id": 1}
+        )
+    }
+    requested_shipment_ids = {
+        shipment_id
+        for item in payload.bags
+        for shipment_id in item.shipment_ids
+    }
+    if requested_shipment_ids != current_shipment_ids:
+        raise HTTPException(
+            status_code=422,
+            detail="El orden debe incluir exactamente todos los bauchers de las maletas modificadas",
+        )
+
+    now = utc_now()
+    operations = []
+    for bag_order in payload.bags:
+        bag = bags_by_id[bag_order.bag_id]
+        for position, shipment_id in enumerate(bag_order.shipment_ids, start=1):
+            operations.append(
+                UpdateOne(
+                    {"_id": object_id(shipment_id)},
+                    {
+                        "$set": {
+                            "bag_id": bag_order.bag_id,
+                            "manifest_id": manifest_id,
+                            "bag_number": bag["number"],
+                            "attendant": bag["attendant"],
+                            "print_order": position,
+                            "updated_at": now,
+                        }
+                    },
+                )
+            )
+    if operations:
+        await database.shipments.bulk_write(operations)
+
+    result = {}
+    for bag_id in requested_bag_ids:
+        cursor = database.shipments.find({"bag_id": bag_id}).sort(
+            [("print_order", ASCENDING), ("created_at", ASCENDING)]
+        )
+        result[bag_id] = [serialize(document) async for document in cursor]
+    return result
 
 
 @app.post(f"{settings.api_prefix}/translate", response_model=TranslateResponse, tags=["Herramientas"])

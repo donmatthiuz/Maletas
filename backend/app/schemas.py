@@ -213,6 +213,33 @@ class ShipmentReorder(BaseModel):
         return value
 
 
+class BagShipmentOrder(BaseModel):
+    bag_id: str = Field(min_length=1)
+    shipment_ids: list[str] = Field(default_factory=list, max_length=500)
+
+    @field_validator("shipment_ids")
+    @classmethod
+    def unique_shipment_ids(cls, value: list[str]) -> list[str]:
+        if len(value) != len(set(value)):
+            raise ValueError("La maleta contiene bauchers repetidos")
+        return value
+
+
+class ManifestShipmentArrange(BaseModel):
+    bags: list[BagShipmentOrder] = Field(min_length=1, max_length=100)
+
+    @field_validator("bags")
+    @classmethod
+    def unique_bag_ids(cls, value: list[BagShipmentOrder]) -> list[BagShipmentOrder]:
+        bag_ids = [item.bag_id for item in value]
+        if len(bag_ids) != len(set(bag_ids)):
+            raise ValueError("La solicitud contiene maletas repetidas")
+        shipment_ids = [shipment_id for item in value for shipment_id in item.shipment_ids]
+        if len(shipment_ids) != len(set(shipment_ids)):
+            raise ValueError("Un baucher no puede aparecer en dos maletas")
+        return value
+
+
 class DashboardStats(BaseModel):
     total_shipments: int
     active_bags: int

@@ -8,7 +8,7 @@ Aplicación web enfocada en generar e imprimir los documentos del libro Excel `M
 - Creación y edición de varias maletas dentro de cada manifiesto, cada una con su propio nombre de remitente.
 - Registro de varios bauchers dentro de cada maleta.
 - Precio editable por baucher, con valor inicial `2` y formato `$2` en la hoja de maleta.
-- Edición, eliminación y ordenamiento persistente de bauchers.
+- Edición, eliminación y ordenamiento persistente de bauchers dentro de una maleta o entre maletas del mismo manifiesto.
 - Directorio independiente para registrar y editar direcciones.
 - Asignación aleatoria de destino sin repetir direcciones dentro del manifiesto.
 - Vista previa e impresión multipágina de las maletas en A4 horizontal.
@@ -24,7 +24,7 @@ Requisitos: Docker y Docker Compose.
 
 ### Frontend testing/local
 
-Usa el frontend en modo `testing`, la API y el contenedor local `mongo`. Importa el XLSM cuando la base está vacía y conserva los datos en el volumen `mongo_data`:
+Usa el frontend en modo `testing`, la API y el contenedor local `mongo`. Importa el XLSM cuando la base está vacía y conserva los datos en el volumen `mongo7_data`:
 
 ```bash
 docker compose up --build
@@ -42,7 +42,9 @@ Para detener el stack:
 docker compose down
 ```
 
-Los datos permanecen en el volumen `mongo_data`. Para arrancar con una base totalmente vacía, elimina expresamente ese volumen con `docker compose down -v`.
+Los datos permanecen en el volumen `mongo7_data`. Para arrancar con una base totalmente vacía, elimina expresamente ese volumen con `docker compose down -v`.
+
+> El entorno local fija MongoDB 7.0.40 porque MongoDB 8.0 no puede iniciar en hosts con kernel Linux 6.19 o posterior (`SERVER-121912`). El backend no depende de funciones exclusivas de MongoDB 8. El volumen anterior `maletas_mongo_data`, si existe, no se elimina automáticamente.
 
 El endpoint de salud muestra `"environment": "testing"`.
 
@@ -144,6 +146,7 @@ Los builds equivalentes son `npm run build:testing` y `npm run build:render`.
 - `PATCH /api/v1/bags/{id}`
 - `GET /api/v1/bags/{id}/shipments`
 - `PUT /api/v1/bags/{id}/shipments/order`
+- `PUT /api/v1/manifests/{id}/shipments/order`
 - `GET/POST /api/v1/shipments`
 - `GET/PATCH/DELETE /api/v1/shipments/{id}`
 - `GET /api/v1/shipments/export.csv`

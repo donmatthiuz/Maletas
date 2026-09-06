@@ -95,3 +95,5 @@ Todos los manifiestos, maletas y bauchers creados para las pruebas fueron elimin
 - El baucher se amplió a `184mm` de ancho, manteniendo sus columnas y alturas proporcionales dentro del A4 vertical y usando márgenes laterales de `13mm` para dar más espacio a las direcciones.
 - Después de crear un baucher se verificó que no aparezca un modal con la dirección asignada. El formulario permanece abierto, limpia código, remitente y destinatario, y conserva dirección en Guatemala, contenido y precio para el siguiente registro.
 - Los formularios de agregar y editar muestran `Imprimir este baucher`; la acción guarda primero y la impresión usa el registro recién confirmado por la API.
+- El organizador de bauchers permite desplegar varias maletas y mover entre ellas por arrastre o mediante el control accesible `Mover`. Una prueba aislada de Playwright verifica inserción al inicio y al final, actualización de la maleta seleccionada y ausencia de desbordamiento horizontal móvil.
+- Las pruebas del backend validan que el movimiento actualiza `bag_id`, número, remitente y `print_order`, y que una maleta de origen puede quedar vacía sin perder bauchers.

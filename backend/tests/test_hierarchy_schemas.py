@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import BagCreate, BagUpdate, ManifestCreate, ManifestUpdate, ShipmentCreate, ShipmentUpdate
+from app.schemas import BagCreate, BagUpdate, ManifestCreate, ManifestShipmentArrange, ManifestUpdate, ShipmentCreate, ShipmentUpdate
 
 
 def test_manifest_no_longer_owns_attendant():
@@ -53,3 +53,22 @@ def test_shipment_price_defaults_to_two_and_can_be_updated():
 
     with pytest.raises(ValidationError):
         ShipmentUpdate(quantity=0)
+
+
+def test_manifest_arrangement_accepts_empty_source_and_rejects_duplicates():
+    arrangement = ManifestShipmentArrange(
+        bags=[
+            {"bag_id": "maleta-origen", "shipment_ids": []},
+            {"bag_id": "maleta-destino", "shipment_ids": ["baucher-1", "baucher-2"]},
+        ]
+    )
+
+    assert arrangement.bags[0].shipment_ids == []
+
+    with pytest.raises(ValidationError):
+        ManifestShipmentArrange(
+            bags=[
+                {"bag_id": "maleta-origen", "shipment_ids": ["baucher-1"]},
+                {"bag_id": "maleta-destino", "shipment_ids": ["baucher-1"]},
+            ]
+        )

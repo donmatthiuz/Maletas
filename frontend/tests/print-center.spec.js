@@ -1,5 +1,107 @@
 import { expect, test } from '@playwright/test'
 
+test('despliega maletas y mueve un baucher a una posición exacta', async ({ page }) => {
+  const manifest = { id: 'manifest-1', name: 'Manifiesto de prueba', manifest_date: '2026-09-06', bag_count: 2, voucher_count: 3 }
+  const bags = [
+    { id: 'bag-1', manifest_id: manifest.id, number: 1, name: 'Maleta #1', attendant: 'Persona uno', voucher_count: 2 },
+    { id: 'bag-2', manifest_id: manifest.id, number: 2, name: 'Maleta #2', attendant: 'Persona dos', voucher_count: 1 },
+  ]
+  const shipment = (id, code, bag, order) => ({
+    id,
+    code,
+    manifest_id: manifest.id,
+    bag_id: bag.id,
+    bag_number: bag.number,
+    print_order: order,
+    shipper_name: `Remitente ${code}`,
+    shipper_address: 'Ciudad de Guatemala',
+    consignee_name: `Destinatario ${code}`,
+    consignee_address: 'Dirección de destino',
+    phone: '5555-5555',
+    contents: 'CLOTHING',
+    quantity: 2,
+    attendant: bag.attendant,
+    shipment_date: manifest.manifest_date,
+    status: 'registrado',
+    customs_type: 'UNSOLICITED',
+  })
+  let shipmentsByBag = {
+    'bag-1': [shipment('voucher-1', 'A-01', bags[0], 1), shipment('voucher-2', 'A-02', bags[0], 2)],
+    'bag-2': [shipment('voucher-3', 'B-01', bags[1], 1)],
+  }
+  const arrangementPayloads = []
+
+  await page.route('**/api/v1/**', async (route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    if (request.method() === 'GET' && url.pathname.endsWith('/manifests')) return route.fulfill({ json: [manifest] })
+    if (request.method() === 'GET' && url.pathname.endsWith('/manifests/manifest-1/bags')) return route.fulfill({ json: bags })
+    if (request.method() === 'GET' && url.pathname.endsWith('/bags/bag-1/shipments')) return route.fulfill({ json: shipmentsByBag['bag-1'] })
+    if (request.method() === 'GET' && url.pathname.endsWith('/bags/bag-2/shipments')) return route.fulfill({ json: shipmentsByBag['bag-2'] })
+    if (request.method() === 'PUT' && url.pathname.endsWith('/manifests/manifest-1/shipments/order')) {
+      const arrangementPayload = request.postDataJSON()
+      arrangementPayloads.push(arrangementPayload)
+      const allShipments = Object.values(shipmentsByBag).flat()
+      const next = {}
+      for (const bagOrder of arrangementPayload.bags) {
+        const targetBag = bags.find((bag) => bag.id === bagOrder.bag_id)
+        next[bagOrder.bag_id] = bagOrder.shipment_ids.map((id, index) => ({
+          ...allShipments.find((item) => item.id === id),
+          bag_id: targetBag.id,
+          bag_number: targetBag.number,
+          attendant: targetBag.attendant,
+          print_order: index + 1,
+        }))
+      }
+      shipmentsByBag = { ...shipmentsByBag, ...next }
+      return route.fulfill({ json: next })
+    }
+    return route.fulfill({ status: 404, json: { detail: `Ruta de prueba no configurada: ${request.method()} ${url.pathname}` } })
+  })
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Bauchers', exact: true }).click()
+  await expect(page.getByRole('button', { name: /^Maleta #1 / })).toHaveAttribute('aria-expanded', 'true')
+  await page.getByRole('button', { name: 'Desplegar todas' }).click()
+  await expect(page.getByRole('button', { name: /^Maleta #2 / })).toHaveAttribute('aria-expanded', 'true')
+
+  const voucher = page.locator('.voucher-sort-item').filter({ hasText: 'A-01' })
+  await voucher.getByRole('button', { name: 'Mover A-01 a otra maleta' }).click()
+  await voucher.getByLabel('Maleta de destino').selectOption('bag-2')
+  await voucher.getByLabel('Posición en destino').selectOption('0')
+  await voucher.getByRole('button', { name: 'Mover baucher' }).click()
+
+  await expect.poll(() => arrangementPayloads[0]).toEqual({
+    bags: [
+      { bag_id: 'bag-1', shipment_ids: ['voucher-2'] },
+      { bag_id: 'bag-2', shipment_ids: ['voucher-1', 'voucher-3'] },
+    ],
+  })
+  const destinationList = page.getByLabel('Orden de bauchers de Maleta #2')
+  await expect(destinationList.locator('.voucher-sort-main').first()).toContainText('A-01')
+  await expect(page.getByLabel('Maleta', { exact: true })).toHaveValue('bag-2')
+
+  const dragHandle = page.getByRole('button', { name: 'Arrastrar baucher A-02' })
+  const targetVoucher = page.locator('.voucher-sort-item').filter({ hasText: 'B-01' })
+  const sourceBox = await dragHandle.boundingBox()
+  const targetBox = await targetVoucher.boundingBox()
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height - 3, { steps: 12 })
+  await page.mouse.up()
+
+  await expect.poll(() => arrangementPayloads[1]).toEqual({
+    bags: [
+      { bag_id: 'bag-1', shipment_ids: [] },
+      { bag_id: 'bag-2', shipment_ids: ['voucher-1', 'voucher-3', 'voucher-2'] },
+    ],
+  })
+  await expect(destinationList.locator('.voucher-sort-main').last()).toContainText('A-02')
+
+  await page.setViewportSize({ width: 375, height: 812 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
+})
+
 test('separa las tareas y mantiene las acciones en su contexto', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Manifiestos y maletas' })).toBeVisible()
