@@ -78,3 +78,23 @@ def test_update_manifest_rejects_date_with_used_address():
     assert error.value.status_code == 409
     database.manifests.update_one.assert_not_awaited()
     database.shipments.update_many.assert_not_awaited()
+
+
+def test_update_manifest_saves_custom_bag_label_without_changing_shipments():
+    manifest_id = str(ObjectId())
+    now = datetime.now(timezone.utc)
+    current = {"_id": ObjectId(manifest_id), "name": "Manifiesto semanal", "manifest_date": "2026-08-29", "created_at": now, "updated_at": now}
+    updated = {**current, "bag_label": "CAJA"}
+    database = SimpleNamespace(
+        manifests=SimpleNamespace(find_one=AsyncMock(side_effect=[current, updated]), update_one=AsyncMock()),
+        bags=SimpleNamespace(count_documents=AsyncMock(return_value=1)),
+        shipments=SimpleNamespace(count_documents=AsyncMock(return_value=2), update_many=AsyncMock()),
+    )
+
+    response = asyncio.run(update_manifest(manifest_id, ManifestUpdate(bag_label=" CAJA "), database))
+
+    assert response["bag_label"] == "CAJA"
+    database.manifests.update_one.assert_awaited_once_with(
+        {"_id": ObjectId(manifest_id)}, {"$set": {"bag_label": "CAJA", "updated_at": ANY}},
+    )
+    database.shipments.update_many.assert_not_awaited()

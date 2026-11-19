@@ -18,6 +18,7 @@ export function paginateManifest(shipments) {
 export default function ExcelManifest({
   shipments,
   bagNumber,
+  bagLabel = 'BAG',
   manifestDate: providedDate,
   attendant: providedAttendant,
   batch = false,
@@ -31,7 +32,7 @@ export default function ExcelManifest({
       <div className="excel-manifest__meta">
         <strong>No</strong>
         <strong>DATE: {displayDate(manifestDate)}</strong>
-        <strong>BAG #{bagNumber}</strong>
+        <strong>{bagLabel} #{bagNumber}</strong>
       </div>
       <div className="excel-manifest__rows">
         {shipments.map((shipment) => (

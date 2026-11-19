@@ -45,16 +45,23 @@ class AddressResponse(AddressBase):
 class ManifestCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     manifest_date: date = Field(default_factory=date.today)
+    bag_label: str = Field(default="BAG", min_length=1, max_length=40)
 
     @field_validator("name")
     @classmethod
     def normalize_manifest_text(cls, value: str) -> str:
         return " ".join(value.strip().split())
 
+    @field_validator("bag_label", mode="before")
+    @classmethod
+    def normalize_bag_label(cls, value: str) -> str:
+        return " ".join(value.strip().split()) if isinstance(value, str) else value
+
 
 class ManifestUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=120)
     manifest_date: date | None = None
+    bag_label: str | None = Field(default=None, min_length=1, max_length=40)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -69,6 +76,13 @@ class ManifestUpdate(BaseModel):
         if value is None or value == "":
             raise ValueError("La fecha del manifiesto no puede quedar vacía")
         return value
+
+    @field_validator("bag_label", mode="before")
+    @classmethod
+    def normalize_bag_label(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError("El texto de la maleta no puede quedar vacío")
+        return " ".join(value.strip().split()) if isinstance(value, str) else value
 
 
 class ManifestResponse(ManifestCreate):

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import BagCreate, BagUpdate, ManifestCreate, ManifestShipmentArrange, ManifestUpdate, ShipmentCreate, ShipmentUpdate
+from app.schemas import BagCreate, BagUpdate, ManifestCreate, ManifestResponse, ManifestShipmentArrange, ManifestUpdate, ShipmentCreate, ShipmentUpdate
 
 
 def test_manifest_no_longer_owns_attendant():
@@ -19,6 +19,23 @@ def test_manifest_update_accepts_date_and_normalizes_name():
 
     with pytest.raises(ValidationError):
         ManifestUpdate(manifest_date=None)
+
+
+def test_manifest_bag_label_defaults_and_validates_custom_text():
+    manifest = ManifestCreate(name="Manifiesto semanal")
+    assert manifest.bag_label == "BAG"
+    assert ManifestCreate(name="Manifiesto semanal", bag_label="  CAJA   GRANDE  ").bag_label == "CAJA GRANDE"
+    assert ManifestUpdate(bag_label="  MALETA  ").bag_label == "MALETA"
+
+    for invalid in ("   ", None):
+        with pytest.raises(ValidationError):
+            ManifestUpdate(bag_label=invalid)
+
+    legacy = ManifestResponse.model_validate({
+        "id": "legacy-id", "name": "Manifiesto anterior", "manifest_date": "2026-08-29",
+        "created_at": "2026-08-29T00:00:00Z", "updated_at": "2026-08-29T00:00:00Z",
+    })
+    assert legacy.bag_label == "BAG"
 
 
 def test_bag_requires_and_normalizes_attendant():
