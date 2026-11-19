@@ -213,6 +213,24 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
 .address-suggestion:hover { border-color: var(--blue-700); }
 .address-suggestion:focus-visible { outline: 2px solid var(--blue-700); outline-offset: 2px; }
 .address-form-note { margin: -8px 0 0; color: var(--slate-600); font-size: 12px; line-height: 1.5; }
+.address-import { display: grid; gap: 16px; }
+.address-import > label { color: var(--slate-700); font-size: 13px; font-weight: 700; }
+.address-import > input[type="file"] { width: 100%; min-height: 44px; padding: 9px 12px; border: 1px solid var(--slate-300); border-radius: 8px; }
+.address-import__summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
+.address-import__summary > * { padding: 6px 10px; border-radius: 7px; background: var(--slate-100); }
+.address-import__summary strong { color: var(--green-700); background: var(--green-100); }
+.address-import__summary span { color: var(--red-700); background: var(--red-100); }
+.address-import__table-wrap { max-height: min(55dvh, 480px); overflow: auto; border: 1px solid var(--slate-200); border-radius: 9px; }
+.address-import__table { width: 100%; min-width: 700px; border-collapse: collapse; font-size: 13px; }
+.address-import__table caption { padding: 10px 12px; color: var(--slate-600); text-align: left; font-size: 12px; }
+.address-import__table th { position: sticky; top: 0; z-index: 1; padding: 9px 10px; color: var(--navy-800); background: var(--slate-100); text-align: left; }
+.address-import__table td { padding: 10px; border-top: 1px solid var(--slate-200); vertical-align: top; overflow-wrap: anywhere; }
+.address-import__table td:nth-child(2) { min-width: 230px; }
+.address-import__table td:last-child { min-width: 220px; }
+.address-import__row--skip { color: var(--red-700); background: var(--red-100); }
+.address-import__row--skip td { border-top-color: #f9c7c3; }
+.address-import__row--inserted { color: var(--green-700); background: var(--green-100); }
+.address-import__result { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px; color: var(--green-700); background: var(--green-100); border-radius: 8px; font-size: 13px; }
 .spin { animation: spin 800ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .confirm-dialog p { margin: 0 0 24px; color: var(--slate-700); }

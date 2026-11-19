@@ -55,3 +55,56 @@ test('avisa duplicados y completa las sugerencias al crear una dirección', asyn
   await dialog.getByRole('button', { name: 'Guardar dirección' }).click()
   await expect.poll(() => saved).toMatchObject({ number: 100, phone: '2405563505', address: 'Calle nueva 13' })
 })
+
+test('muestra la vista previa del Excel y omite la dirección repetida', async ({ page }) => {
+  let confirmation = null
+  await page.route('**/api/v1/**', async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+    if (request.method() === 'GET' && pathname.endsWith('/manifests')) return route.fulfill({ json: [] })
+    if (request.method() === 'GET' && pathname.endsWith('/addresses')) return route.fulfill({ json: [] })
+    if (request.method() === 'POST' && pathname.endsWith('/addresses/import/preview')) {
+      return route.fulfill({ json: {
+        filename: 'direcciones.xlsx', digest: 'preview-digest',
+        ready_count: 1, duplicate_count: 1, invalid_count: 0,
+        rows: [
+          { row: 1, address: 'Calle nueva 1', number: 100, phone: '2405563505', status: 'ready', reason: 'Se insertará.' },
+          { row: 2, address: 'CALLE NUEVA 1', number: null, phone: null, status: 'duplicate', reason: 'Repetida en la fila 1. No se insertará.' },
+        ],
+      } })
+    }
+    if (request.method() === 'POST' && pathname.endsWith('/addresses/import/confirm')) {
+      confirmation = { contentType: request.headers()['content-type'], body: request.postData() }
+      return route.fulfill({ json: {
+        inserted_count: 1, skipped_count: 1,
+        results: [
+          { row: 1, status: 'inserted' },
+          { row: 2, status: 'skipped', reason: 'Repetida en la fila 1. No se insertará.' },
+        ],
+      } })
+    }
+    return route.fulfill({ status: 404, json: { detail: 'Ruta no configurada' } })
+  })
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Direcciones', exact: true }).click()
+  await page.getByRole('button', { name: 'Importar Excel' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Importar direcciones desde Excel' })
+  await dialog.getByLabel('Archivo .xlsx o .xlsm').setInputFiles({
+    name: 'direcciones.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: Buffer.from('archivo de prueba'),
+  })
+
+  await expect(dialog.getByText('1 se insertarán')).toBeVisible()
+  const duplicate = dialog.locator('tbody tr').nth(1)
+  await expect(duplicate).toContainText('No se insertará')
+  await expect(duplicate).toHaveCSS('background-color', 'rgb(254, 228, 226)')
+  await expect(dialog.locator('tbody tr').first()).toContainText('2405563505')
+
+  await dialog.getByRole('button', { name: 'Importar 1 dirección' }).click()
+  await expect(dialog.getByText('1 dirección insertada.')).toBeVisible()
+  await expect(dialog.locator('tbody tr').first()).toContainText('Insertada.')
+  expect(confirmation.contentType).toContain('multipart/form-data')
+  expect(confirmation.body).toContain('preview-digest')
+})

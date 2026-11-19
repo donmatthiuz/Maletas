@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from datetime import date
 
 from bson import ObjectId
-from fastapi import Depends, FastAPI, HTTPException, Query, Response, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -44,6 +44,7 @@ from app.services.address_assignment import (
     ensure_new_address_assignment_index,
 )
 from app.services.address_directory import address_key, check_directory_entry, duplicate_detail, phone_key
+from app.services.address_excel_import import MAX_EXCEL_BYTES, confirm_address_import, preview_address_import
 from app.services.translator import translate_contents
 
 
@@ -431,6 +432,36 @@ async def list_addresses(
             query["$or"].append({"number": int(search.strip())})
     cursor = database.addresses.find(query).sort("number", ASCENDING).limit(limit)
     return [serialize(document) async for document in cursor]
+
+
+@app.post(
+    f"{settings.api_prefix}/addresses/import/preview",
+    response_model=dict,
+    tags=["Directorio"],
+)
+async def preview_addresses_from_excel(
+    file: UploadFile = File(...), database: AsyncIOMotorDatabase = Depends(get_database)
+):
+    try:
+        return await preview_address_import(database, await file.read(MAX_EXCEL_BYTES + 1), file.filename or "")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post(
+    f"{settings.api_prefix}/addresses/import/confirm",
+    response_model=dict,
+    tags=["Directorio"],
+)
+async def confirm_addresses_from_excel(
+    file: UploadFile = File(...),
+    digest: str = Form(...),
+    database: AsyncIOMotorDatabase = Depends(get_database),
+):
+    try:
+        return await confirm_address_import(database, await file.read(MAX_EXCEL_BYTES + 1), file.filename or "", digest)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @app.post(

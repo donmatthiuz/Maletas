@@ -1,5 +1,5 @@
-import { useDeferredValue, useEffect, useState } from 'react'
-import { Edit3, MapPin, Phone, Plus, Save, Search } from 'lucide-react'
+import { useDeferredValue, useEffect, useRef, useState } from 'react'
+import { Edit3, FileSpreadsheet, MapPin, Phone, Plus, Save, Search } from 'lucide-react'
 import { api, queryString } from '../api'
 import EmptyState from '../components/EmptyState'
 import Loading from '../components/Loading'
@@ -28,6 +28,14 @@ export default function AddressesPage({ notify, onChanged }) {
   const [check, setCheck] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
+  const [importFile, setImportFile] = useState(null)
+  const [importPreview, setImportPreview] = useState(null)
+  const [importResult, setImportResult] = useState(null)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importSaving, setImportSaving] = useState(false)
+  const [importError, setImportError] = useState('')
+  const importRequestId = useRef(0)
 
   const load = () => {
     setLoading(true)
@@ -69,6 +77,7 @@ export default function AddressesPage({ notify, onChanged }) {
     setCheck(null)
   }
   const hasDuplicate = duplicateFields.some((field) => check?.[field])
+  const importOutcomes = new Map(importResult?.results?.map((item) => [item.row, item]) || [])
 
   const submit = async (event) => {
     event.preventDefault()
@@ -99,9 +108,61 @@ export default function AddressesPage({ notify, onChanged }) {
     }
   }
 
+  const closeImport = () => {
+    importRequestId.current += 1
+    setImportOpen(false)
+    setImportFile(null)
+    setImportPreview(null)
+    setImportResult(null)
+    setImportError('')
+    setImportLoading(false)
+    setImportSaving(false)
+  }
+  const previewFile = async (file) => {
+    const requestId = ++importRequestId.current
+    setImportFile(file)
+    setImportPreview(null)
+    setImportResult(null)
+    setImportError('')
+    setImportLoading(false)
+    if (!file) return
+    setImportLoading(true)
+    const body = new FormData()
+    body.append('file', file)
+    try {
+      const preview = await api('/addresses/import/preview', { method: 'POST', body })
+      if (requestId === importRequestId.current) setImportPreview(preview)
+    } catch (requestError) {
+      if (requestId === importRequestId.current) setImportError(requestError.message)
+    } finally {
+      if (requestId === importRequestId.current) setImportLoading(false)
+    }
+  }
+  const confirmImport = async () => {
+    if (!importFile || !importPreview?.ready_count) return
+    const requestId = importRequestId.current
+    setImportSaving(true)
+    setImportError('')
+    const body = new FormData()
+    body.append('file', importFile)
+    body.append('digest', importPreview.digest)
+    try {
+      const result = await api('/addresses/import/confirm', { method: 'POST', body })
+      if (requestId === importRequestId.current) setImportResult(result)
+      notify(`${result.inserted_count} ${result.inserted_count === 1 ? 'dirección importada' : 'direcciones importadas'}.`)
+      load()
+      onChanged?.()
+    } catch (requestError) {
+      if (requestId === importRequestId.current) setImportError(requestError.message)
+    } finally {
+      if (requestId === importRequestId.current) setImportSaving(false)
+    }
+  }
+
   return <div className="page-stack">
     <section className="toolbar">
       <div className="search-field"><Search aria-hidden="true" /><label className="sr-only" htmlFor="address-search">Buscar dirección</label><input id="address-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por número, dirección o teléfono" /></div>
+      <button className="button button--secondary" onClick={() => setImportOpen(true)}><FileSpreadsheet /> Importar Excel</button>
       <button className="button button--primary" onClick={() => open()}><Plus /> Nueva dirección</button>
     </section>
     <section className="panel">
@@ -133,6 +194,38 @@ export default function AddressesPage({ notify, onChanged }) {
         <p className="address-form-note">El teléfono sugerido se calcula para que no se repita. Confirma que corresponde al destinatario antes de guardar.</p>
         <div className="form-actions"><button className="button button--primary" disabled={saving || checking || hasDuplicate}><Save /> {saving ? 'Guardando…' : checking ? 'Comprobando…' : 'Guardar dirección'}</button></div>
       </form>
+    </Modal>
+    <Modal open={importOpen} onClose={closeImport} title="Importar direcciones desde Excel" description="Se lee la columna A de la primera hoja desde la primera fila, sin encabezado." size="large">
+      <div className="address-import">
+        <label htmlFor="address-import-file">Archivo .xlsx o .xlsm</label>
+        <input id="address-import-file" type="file" accept=".xlsx,.xlsm" onChange={(event) => previewFile(event.target.files?.[0] || null)} />
+        {importLoading && <p role="status">Preparando vista previa…</p>}
+        {importError && <div className="error-summary" role="alert">{importError}</div>}
+        {importPreview && <>
+          <div className="address-import__summary" aria-live="polite">
+            <strong>{importPreview.ready_count} se insertarán</strong>
+            <span>{importPreview.duplicate_count} repetidas</span>
+            <span>{importPreview.invalid_count} inválidas</span>
+          </div>
+          <div className="address-import__table-wrap">
+            <table className="address-import__table">
+              <caption>Vista previa de {importPreview.filename}</caption>
+              <thead><tr><th>Fila</th><th>Dirección</th><th>Número</th><th>Teléfono</th><th>Resultado</th></tr></thead>
+              <tbody>{importPreview.rows.map((row) => {
+                const outcome = importOutcomes.get(row.row)
+                const rowClass = outcome?.status === 'inserted' ? 'address-import__row--inserted' : outcome?.status === 'skipped' || row.status !== 'ready' ? 'address-import__row--skip' : ''
+                return <tr key={row.row} className={rowClass}><td>{row.row}</td><td>{row.address}</td><td>{row.number ?? '—'}</td><td>{row.phone ?? '—'}</td><td>{outcome?.status === 'inserted' ? 'Insertada.' : outcome?.reason || row.reason}</td></tr>
+              })}</tbody>
+            </table>
+          </div>
+          <p className="address-form-note">Los teléfonos se calculan para que no se repitan. Confirma que correspondan a los destinatarios antes de importar.</p>
+        </>}
+        {importResult && <div className="address-import__result" role="status"><strong>{importResult.inserted_count} {importResult.inserted_count === 1 ? 'dirección insertada' : 'direcciones insertadas'}.</strong><span>{importResult.skipped_count} {importResult.skipped_count === 1 ? 'fila no insertada' : 'filas no insertadas'}.</span></div>}
+        <div className="form-actions">
+          {importPreview && !importResult && <button type="button" className="button button--secondary" disabled={importLoading || importSaving} onClick={() => previewFile(importFile)}>Actualizar vista previa</button>}
+          {importResult ? <button type="button" className="button button--primary" onClick={closeImport}>Cerrar</button> : <button type="button" className="button button--primary" disabled={!importPreview?.ready_count || importLoading || importSaving} onClick={confirmImport}>{importSaving ? 'Importando…' : `Importar ${importPreview?.ready_count || 0} ${importPreview?.ready_count === 1 ? 'dirección' : 'direcciones'}`}</button>}
+        </div>
+      </div>
     </Modal>
   </div>
 }

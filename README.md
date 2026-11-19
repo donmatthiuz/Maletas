@@ -10,6 +10,7 @@ Aplicación web enfocada en generar e imprimir los documentos del libro Excel `M
 - Precio editable por baucher, con valor inicial `2` y formato `$2` en la hoja de maleta.
 - Edición, eliminación y ordenamiento persistente de bauchers dentro de una maleta o entre maletas del mismo manifiesto.
 - Directorio independiente para registrar y editar direcciones.
+- Importación de direcciones desde la columna A de la primera hoja de un Excel `.xlsx` o `.xlsm`, con vista previa de números y teléfonos propuestos y exclusión de repetidas.
 - Asignación aleatoria de destino para nuevos bauchers sin repetir direcciones ya usadas en manifiestos de la misma fecha. En fechas distintas se pueden reutilizar.
 - Vista previa e impresión multipágina de las maletas en A4 horizontal.
 - Impresión de un baucher, una maleta o todos los bauchers del manifiesto en A4 vertical.
@@ -153,6 +154,8 @@ Los builds equivalentes son `npm run build:testing` y `npm run build:render`.
 - `GET /api/v1/shipments/export.csv`
 - `GET/POST /api/v1/addresses`
 - `PATCH /api/v1/addresses/{id}`
+- `POST /api/v1/addresses/import/preview`
+- `POST /api/v1/addresses/import/confirm`
 - `GET /api/v1/manifests?bag_number=1`
 - `GET /api/v1/stats`
 - `POST /api/v1/translate`
