@@ -1,5 +1,4 @@
 import asyncio
-from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -8,7 +7,11 @@ from pymongo.errors import DuplicateKeyError
 
 from app.main import create_shipment, resolve_random_address, update_shipment
 from app.schemas import ShipmentCreate, ShipmentUpdate
-from app.services.address_assignment import DAILY_ADDRESS_INDEX, ensure_unique_daily_addresses
+from app.services.address_assignment import (
+    ADDRESS_ASSIGNMENT_VERSION,
+    DAILY_ADDRESS_INDEX,
+    ensure_new_address_assignment_index,
+)
 
 
 class AsyncCursor:
@@ -86,6 +89,7 @@ def test_create_retries_when_another_request_claims_the_address():
     assert [item["address_number"] for item in attempts] == [2, 3]
     assert result["address_number"] == 3
     assert all(item["shipment_date"] == "2026-11-19" for item in attempts)
+    assert all(item["address_assignment_version"] == ADDRESS_ASSIGNMENT_VERSION for item in attempts)
 
 
 def test_move_to_another_manifest_on_same_date_keeps_address():
@@ -118,46 +122,16 @@ def test_move_to_another_manifest_on_same_date_keeps_address():
     assert "address_number" not in database.shipments.update_one.call_args.args[1]["$set"]
 
 
-def test_startup_repairs_old_duplicates_without_moving_other_addresses():
-    manifest_one, manifest_two, manifest_later = ObjectId(), ObjectId(), ObjectId()
-    now = datetime.now(timezone.utc)
-    shipments = [
-        {"_id": ObjectId(), "manifest_id": str(manifest_one), "shipment_date": "2026-11-19", "address_number": 1, "created_at": now},
-        {"_id": ObjectId(), "manifest_id": str(manifest_two), "shipment_date": "2026-11-19", "address_number": 1, "created_at": now},
-        {"_id": ObjectId(), "manifest_id": str(manifest_two), "shipment_date": "2026-11-19", "address_number": 2, "created_at": now},
-        {"_id": ObjectId(), "manifest_id": str(manifest_later), "shipment_date": "2026-11-20", "address_number": 1, "created_at": now},
-    ]
-    addresses = [
-        {"number": number, "address": f"Dirección {number}", "phone": "12345678"}
-        for number in (1, 2, 3)
-    ]
-    manifests = [
-        {"_id": manifest_one, "manifest_date": "2026-11-19"},
-        {"_id": manifest_two, "manifest_date": "2026-11-19"},
-        {"_id": manifest_later, "manifest_date": "2026-11-20"},
-    ]
+def test_startup_only_creates_index_for_new_assignments():
+    database = SimpleNamespace(shipments=SimpleNamespace(create_index=AsyncMock()))
 
-    async def update(query, change):
-        next(item for item in shipments if item["_id"] == query["_id"]).update(change["$set"])
+    asyncio.run(ensure_new_address_assignment_index(database))
 
-    database = SimpleNamespace(
-        manifests=SimpleNamespace(find=Mock(return_value=AsyncCursor(manifests))),
-        addresses=SimpleNamespace(find=Mock(return_value=AsyncCursor(addresses))),
-        shipments=SimpleNamespace(
-            find=Mock(return_value=AsyncCursor(shipments)),
-            update_one=AsyncMock(side_effect=update),
-            create_index=AsyncMock(),
-        ),
-    )
-
-    asyncio.run(ensure_unique_daily_addresses(database))
-
-    assert [item["address_number"] for item in shipments] == [1, 3, 2, 1]
-    assert shipments[1]["consignee_address"] == "Dirección 3"
     assert database.shipments.create_index.call_args.kwargs == {
         "unique": True,
         "name": DAILY_ADDRESS_INDEX,
-        "partialFilterExpression": {"manifest_id": {"$type": "string"}},
+        "partialFilterExpression": {
+            "manifest_id": {"$type": "string"},
+            "address_assignment_version": ADDRESS_ASSIGNMENT_VERSION,
+        },
     }
-    asyncio.run(ensure_unique_daily_addresses(database))
-    assert database.shipments.update_one.await_count == 1

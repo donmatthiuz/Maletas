@@ -379,7 +379,7 @@ export default function PrintCenterPage({ notify }) {
 }
 
 function AddressesView({ notify }) {
-  return <div className="screen-content"><div className="section-heading"><div><span className="section-kicker">DIRECTORIO</span><h1>Direcciones de destino</h1><p>Estas direcciones se asignan aleatoriamente y sin repetirse entre manifiestos de la misma fecha.</p></div></div><AddressesPage notify={notify} /></div>
+  return <div className="screen-content"><div className="section-heading"><div><span className="section-kicker">DIRECTORIO</span><h1>Direcciones de destino</h1><p>Los bauchers nuevos reciben una dirección aleatoria que aún no se haya usado en manifiestos de la misma fecha.</p></div></div><AddressesPage notify={notify} /></div>
 }
 
 function EmptyHierarchy({ type, onAction }) {

@@ -38,7 +38,10 @@ from app.schemas import (
 )
 from app.services.importer import seed_database
 from app.services.hierarchy import ensure_hierarchy
-from app.services.address_assignment import ensure_unique_daily_addresses
+from app.services.address_assignment import (
+    ADDRESS_ASSIGNMENT_VERSION,
+    ensure_new_address_assignment_index,
+)
 from app.services.translator import translate_contents
 
 
@@ -105,7 +108,7 @@ async def lifespan(_: FastAPI):
     if settings.seed_from_workbook:
         await seed_database(database, settings.source_workbook)
     await ensure_hierarchy(database)
-    await ensure_unique_daily_addresses(database)
+    await ensure_new_address_assignment_index(database)
     yield
     await close_database()
 
@@ -289,6 +292,7 @@ async def create_shipment(
                 "bag_number": bag["number"],
                 "shipment_date": manifest["manifest_date"],
                 "attendant": bag["attendant"],
+                "address_assignment_version": ADDRESS_ASSIGNMENT_VERSION,
             }
         )
     if not manifest and payload.address_number:
@@ -382,6 +386,7 @@ async def update_shipment(
                 address_number=address["number"],
                 consignee_address=address["address"],
                 phone=address["phone"],
+                address_assignment_version=ADDRESS_ASSIGNMENT_VERSION,
             )
         try:
             await database.shipments.update_one({"_id": shipment_oid}, {"$set": changes})
