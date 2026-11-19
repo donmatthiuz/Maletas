@@ -17,6 +17,7 @@ from app.config import get_settings
 from app.database import close_database, connect_database, get_database
 from app.schemas import (
     AddressCreate,
+    AddressCheck,
     AddressResponse,
     BagCreate,
     BagResponse,
@@ -42,6 +43,7 @@ from app.services.address_assignment import (
     ADDRESS_ASSIGNMENT_VERSION,
     ensure_new_address_assignment_index,
 )
+from app.services.address_directory import address_key, check_directory_entry, duplicate_detail, phone_key
 from app.services.translator import translate_contents
 
 
@@ -432,6 +434,20 @@ async def list_addresses(
 
 
 @app.post(
+    f"{settings.api_prefix}/addresses/check",
+    response_model=dict,
+    tags=["Directorio"],
+)
+async def check_address(
+    payload: AddressCheck, database: AsyncIOMotorDatabase = Depends(get_database)
+):
+    excluded = object_id(payload.exclude_id) if payload.exclude_id else None
+    return await check_directory_entry(
+        database, payload.number, payload.address, payload.phone, excluded
+    )
+
+
+@app.post(
     f"{settings.api_prefix}/addresses",
     response_model=AddressResponse,
     status_code=status.HTTP_201_CREATED,
@@ -440,11 +456,19 @@ async def list_addresses(
 async def create_address(
     payload: AddressCreate, database: AsyncIOMotorDatabase = Depends(get_database)
 ):
+    check = await check_directory_entry(database, payload.number, payload.address, payload.phone)
+    if any(check[field] for field in ("duplicate_number", "duplicate_phone", "duplicate_address")):
+        raise HTTPException(status_code=409, detail=duplicate_detail(check))
+    document = {
+        **payload.model_dump(),
+        "address_key": address_key(payload.address),
+        "phone_key": phone_key(payload.phone),
+    }
     try:
-        result = await database.addresses.insert_one(payload.model_dump())
+        result = await database.addresses.insert_one(document)
     except DuplicateKeyError as exc:
         raise HTTPException(
-            status_code=409, detail=f"Ya existe la dirección n.º {payload.number}"
+            status_code=409, detail="El número, teléfono o dirección ya existe en el directorio."
         ) from exc
     return serialize(await database.addresses.find_one({"_id": result.inserted_id}))
 
@@ -463,10 +487,22 @@ async def update_address(
     current = await database.addresses.find_one({"_id": address_oid})
     if not current:
         raise HTTPException(status_code=404, detail="Dirección no encontrada")
+    check = await check_directory_entry(
+        database, payload.number, payload.address, payload.phone, address_oid
+    )
+    if any(check[field] for field in ("duplicate_number", "duplicate_phone", "duplicate_address")):
+        raise HTTPException(status_code=409, detail=duplicate_detail(check))
     try:
-        await database.addresses.update_one({"_id": address_oid}, {"$set": payload.model_dump()})
+        await database.addresses.update_one(
+            {"_id": address_oid},
+            {"$set": {
+                **payload.model_dump(),
+                "address_key": address_key(payload.address),
+                "phone_key": phone_key(payload.phone),
+            }},
+        )
     except DuplicateKeyError as exc:
-        raise HTTPException(status_code=409, detail="Ese número ya está en uso") from exc
+        raise HTTPException(status_code=409, detail="El número, teléfono o dirección ya existe en el directorio.") from exc
 
     await database.shipments.update_many(
         {"address_number": current["number"]},

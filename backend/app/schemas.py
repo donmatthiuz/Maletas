@@ -23,7 +23,19 @@ class AddressBase(BaseModel):
 
 
 class AddressCreate(AddressBase):
-    pass
+    @field_validator("phone")
+    @classmethod
+    def require_phone_digits(cls, value: str) -> str:
+        if not 7 <= sum(char.isdecimal() for char in value) <= 15:
+            raise ValueError("El teléfono debe tener entre 7 y 15 dígitos")
+        return value
+
+
+class AddressCheck(BaseModel):
+    number: int | None = Field(default=None, ge=1)
+    address: str | None = None
+    phone: str | None = None
+    exclude_id: str | None = None
 
 
 class AddressResponse(AddressBase):

@@ -16,6 +16,14 @@ async def connect_database() -> AsyncIOMotorDatabase:
 
     await database.addresses.create_index("number", unique=True)
     await database.addresses.create_index([("address", "text"), ("phone", "text")])
+    await database.addresses.create_index(
+        "address_key", unique=True, name="address_key_unique",
+        partialFilterExpression={"address_key": {"$type": "string"}},
+    )
+    await database.addresses.create_index(
+        "phone_key", unique=True, name="phone_key_unique",
+        partialFilterExpression={"phone_key": {"$type": "string"}},
+    )
     await database.shipments.create_index("code")
     await database.manifests.create_index("legacy_date", unique=True, sparse=True)
     await database.manifests.create_index("manifest_date")

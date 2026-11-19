@@ -205,6 +205,14 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue-600); outli
 .input-action .button { min-height: 64px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 2px; }
 .error-summary { padding: 12px 14px; color: #8c1b13; background: var(--red-100); border: 1px solid #f9c7c3; border-radius: 9px; font-size: 13px; }
+.address-field { min-width: 0; display: grid; align-content: start; gap: 6px; color: var(--slate-700); font-size: 13px; }
+.address-field label { display: block; font-weight: 500; }
+.address-field [aria-invalid="true"] { border-color: #c94035; box-shadow: 0 0 0 1px #c94035; }
+.address-field__error { color: #a62218; font-size: 12px; line-height: 1.4; }
+.address-suggestion { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 11px; color: var(--blue-700); background: var(--blue-50); border: 1px solid #c9def8; border-radius: 8px; text-align: left; cursor: pointer; }
+.address-suggestion:hover { border-color: var(--blue-700); }
+.address-suggestion:focus-visible { outline: 2px solid var(--blue-700); outline-offset: 2px; }
+.address-form-note { margin: -8px 0 0; color: var(--slate-600); font-size: 12px; line-height: 1.5; }
 .spin { animation: spin 800ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .confirm-dialog p { margin: 0 0 24px; color: var(--slate-700); }

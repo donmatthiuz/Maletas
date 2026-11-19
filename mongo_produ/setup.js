@@ -149,6 +149,14 @@ targetDb.addresses.createIndex(
   { address: "text", phone: "text" },
   { name: "address_text_phone_text" },
 );
+targetDb.addresses.createIndex(
+  { address_key: 1 },
+  { name: "address_key_unique", unique: true, partialFilterExpression: { address_key: { $type: "string" } } },
+);
+targetDb.addresses.createIndex(
+  { phone_key: 1 },
+  { name: "phone_key_unique", unique: true, partialFilterExpression: { phone_key: { $type: "string" } } },
+);
 
 targetDb.manifests.createIndex(
   { legacy_date: 1 },

@@ -3,7 +3,7 @@
 const DATABASE_NAME = "maletas";
 const targetDb = db.getSiblingDB(DATABASE_NAME);
 const expectedIndexes = {
-  addresses: ["_id_", "number_1", "address_text_phone_text"],
+  addresses: ["_id_", "number_1", "address_text_phone_text", "address_key_unique", "phone_key_unique"],
   manifests: ["_id_", "legacy_date_1", "manifest_date_1"],
   bags: ["_id_", "manifest_id_1_number_1"],
   shipments: [
