@@ -10,13 +10,14 @@ Aplicación web enfocada en generar e imprimir los documentos del libro Excel `M
 - Precio editable por baucher, con valor inicial `2` y formato `$2` en la hoja de maleta.
 - Edición, eliminación y ordenamiento persistente de bauchers dentro de una maleta o entre maletas del mismo manifiesto.
 - Directorio independiente para registrar y editar direcciones.
-- Asignación aleatoria de destino sin repetir direcciones dentro del manifiesto.
+- Asignación aleatoria de destino sin repetir direcciones entre manifiestos de la misma fecha. En fechas distintas se pueden reutilizar.
 - Vista previa e impresión multipágina de las maletas en A4 horizontal.
 - Impresión de un baucher, una maleta o todos los bauchers del manifiesto en A4 vertical.
 - Traducción automática completa español→inglés, conservando las equivalencias de la macro.
 - Formatos, columnas y proporciones recuperados de las hojas `Manifiesto` y `Bauncher`.
 
 La primera vez que arranca un MongoDB vacío, la API importa automáticamente las 99 direcciones y los 38 envíos del libro original. En arranques posteriores no duplica registros.
+Al iniciar, la API reasigna las direcciones repetidas de los registros anteriores y crea un índice único para impedir repeticiones por fecha, incluso si se registran bauchers al mismo tiempo. Si una fecha tiene más bauchers que direcciones disponibles, hay que ampliar el directorio antes de iniciar la API.
 
 ## Modos Docker
 

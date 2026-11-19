@@ -38,6 +38,7 @@ from app.schemas import (
 )
 from app.services.importer import seed_database
 from app.services.hierarchy import ensure_hierarchy
+from app.services.address_assignment import ensure_unique_daily_addresses
 from app.services.translator import translate_contents
 
 
@@ -66,10 +67,11 @@ async def resolve_address(database: AsyncIOMotorDatabase, number: int) -> dict:
 
 
 async def resolve_random_address(
-    database: AsyncIOMotorDatabase, manifest_id: str
+    database: AsyncIOMotorDatabase, shipment_date: str
 ) -> dict:
     used_numbers = await database.shipments.distinct(
-        "address_number", {"manifest_id": manifest_id}
+        "address_number",
+        {"shipment_date": shipment_date, "manifest_id": {"$type": "string"}},
     )
     pipeline = [
         {"$match": {"number": {"$nin": [number for number in used_numbers if number]}}},
@@ -82,7 +84,7 @@ async def resolve_random_address(
     if not address:
         raise HTTPException(
             status_code=409,
-            detail="No quedan direcciones sin usar en este manifiesto. Registra más direcciones para continuar.",
+            detail=f"No quedan direcciones sin usar para el {shipment_date}. Registra más direcciones para continuar.",
         )
     return address
 
@@ -103,6 +105,7 @@ async def lifespan(_: FastAPI):
     if settings.seed_from_workbook:
         await seed_database(database, settings.source_workbook)
     await ensure_hierarchy(database)
+    await ensure_unique_daily_addresses(database)
     yield
     await close_database()
 
@@ -288,11 +291,9 @@ async def create_shipment(
                 "attendant": bag["attendant"],
             }
         )
-    if manifest:
-        address = await resolve_random_address(database, str(manifest["_id"]))
-    elif payload.address_number:
+    if not manifest and payload.address_number:
         address = await resolve_address(database, payload.address_number)
-    else:
+    elif not manifest:
         raise HTTPException(status_code=422, detail="El baucher debe pertenecer a una maleta")
 
     if bag:
@@ -302,17 +303,22 @@ async def create_shipment(
         document["print_order"] = int(last.get("print_order", 0) if last else 0) + 1
     if payload.translate_contents:
         document["contents"] = await run_in_threadpool(translate_contents, payload.contents)
-    document.update(
-        {
-            "consignee_address": address["address"],
-            "address_number": address["number"],
-            "phone": address["phone"],
-            "customs_type": "UNSOLICITED",
-            "created_at": utc_now(),
-            "updated_at": utc_now(),
-        }
-    )
-    result = await database.shipments.insert_one(document)
+    document.update({"customs_type": "UNSOLICITED", "created_at": utc_now(), "updated_at": utc_now()})
+    while True:
+        if manifest:
+            address = await resolve_random_address(database, manifest["manifest_date"])
+        document.update(
+            consignee_address=address["address"],
+            address_number=address["number"],
+            phone=address["phone"],
+        )
+        try:
+            result = await database.shipments.insert_one(document)
+            break
+        except DuplicateKeyError:
+            if not manifest:
+                raise
+            # Another request claimed this address after the random selection.
     return serialize(await database.shipments.find_one({"_id": result.inserted_id}))
 
 
@@ -347,12 +353,16 @@ async def update_shipment(
 
     changes = payload.model_dump(
         exclude_unset=True,
-        exclude={"translate_contents", "address_number"},
+        exclude={"translate_contents", "address_number", "manifest_id", "shipment_date"},
         mode="json",
     )
     if payload.bag_id:
         bag, manifest = await resolve_bag(database, payload.bag_id)
         moving_manifest = str(manifest["_id"]) != current.get("manifest_id")
+        needs_address = moving_manifest and (
+            not current.get("manifest_id")
+            or manifest["manifest_date"] != current.get("shipment_date")
+        )
         changes.update(
             {
                 "bag_id": str(bag["_id"]),
@@ -362,19 +372,23 @@ async def update_shipment(
                 "attendant": bag["attendant"],
             }
         )
-        if moving_manifest:
-            address = await resolve_random_address(database, str(manifest["_id"]))
-            changes.update(
-                {
-                    "address_number": address["number"],
-                    "consignee_address": address["address"],
-                    "phone": address["phone"],
-                }
-            )
     if payload.translate_contents and "contents" in changes:
         changes["contents"] = await run_in_threadpool(translate_contents, changes["contents"])
     changes["updated_at"] = utc_now()
-    await database.shipments.update_one({"_id": shipment_oid}, {"$set": changes})
+    while True:
+        if payload.bag_id and needs_address:
+            address = await resolve_random_address(database, manifest["manifest_date"])
+            changes.update(
+                address_number=address["number"],
+                consignee_address=address["address"],
+                phone=address["phone"],
+            )
+        try:
+            await database.shipments.update_one({"_id": shipment_oid}, {"$set": changes})
+            break
+        except DuplicateKeyError:
+            if not (payload.bag_id and needs_address):
+                raise
     return serialize(await database.shipments.find_one({"_id": shipment_oid}))
 
 
@@ -525,14 +539,40 @@ async def update_manifest(
     changes = payload.model_dump(exclude_unset=True, mode="json")
     if not changes:
         raise HTTPException(status_code=422, detail="No se enviaron cambios para el manifiesto")
-    changes["updated_at"] = utc_now()
-    await database.manifests.update_one({"_id": manifest_oid}, {"$set": changes})
-
-    if "manifest_date" in changes:
-        await database.shipments.update_many(
-            {"manifest_id": manifest_id},
-            {"$set": {"shipment_date": changes["manifest_date"], "updated_at": utc_now()}},
+    new_date = changes.get("manifest_date")
+    if new_date and new_date != current["manifest_date"]:
+        numbers = await database.shipments.distinct(
+            "address_number", {"manifest_id": manifest_id}
         )
+        if numbers and await database.shipments.find_one(
+            {
+                "shipment_date": new_date,
+                "address_number": {"$in": numbers},
+                "manifest_id": {"$type": "string", "$ne": manifest_id},
+            },
+            {"address_number": 1},
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="La nueva fecha ya tiene direcciones asignadas a otros manifiestos. Elige otra fecha.",
+            )
+    changes["updated_at"] = utc_now()
+    if new_date and new_date != current["manifest_date"]:
+        try:
+            await database.shipments.update_many(
+                {"manifest_id": manifest_id},
+                {"$set": {"shipment_date": new_date, "updated_at": utc_now()}},
+            )
+        except DuplicateKeyError as exc:
+            await database.shipments.update_many(
+                {"manifest_id": manifest_id, "shipment_date": new_date},
+                {"$set": {"shipment_date": current["manifest_date"], "updated_at": utc_now()}},
+            )
+            raise HTTPException(
+                status_code=409,
+                detail="La fecha recibió una dirección usada mientras se actualizaba el manifiesto. Inténtalo de nuevo.",
+            ) from exc
+    await database.manifests.update_one({"_id": manifest_oid}, {"$set": changes})
 
     updated = serialize(await database.manifests.find_one({"_id": manifest_oid}))
     updated["bag_count"] = await database.bags.count_documents(
